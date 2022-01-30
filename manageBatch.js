@@ -1,18 +1,23 @@
 /** @param {NS} ns **/
 
-async function batchCycle(ns, { target, threads, timing, options }) {
+async function batchCycle(ns, { host, target, threads, timing, options }) {
   if (options.debug) {
-    ns.print(`weaken ${target} -t ${threads.mitigateHack}`);
-    ns.print(`sleep ${timing.beforeWeaken}`);
-    ns.print(`weaken ${target} -t ${threads.mitigateGrow}`);
-    ns.print(`sleep ${timing.beforeGrow}`);
-    ns.print(`grow ${target} -t ${threads.grow}`);
-    ns.print(`sleep ${timing.beforeHack}`);
-    ns.print(`hack ${target} -t ${threads.hack}`);
+    ns.tprint(`Batch plan on ${host}:`);
+    ns.tprint(`  weaken ${target} -t ${threads.mitigateHack}`);
+    ns.tprint(`  sleep ${timing.beforeWeaken}`);
+    ns.tprint(`  weaken ${target} -t ${threads.mitigateGrow}`);
+    ns.tprint(`  sleep ${timing.beforeGrow}`);
+    ns.tprint(`  grow ${target} -t ${threads.grow}`);
+    ns.tprint(`  sleep ${timing.beforeHack}`);
+    ns.tprint(`  hack ${target} -t ${threads.hack}`);
   } else {
-    ns.run(options.files.weaken, threads.mitigateHack, target, "1");
+    if (threads.mitigateHack) {
+      ns.run(options.files.weaken, threads.mitigateHack, target, "mitigateHack");
+    }
     await ns.sleep(timing.beforeWeaken);
-    ns.run(options.files.weaken, threads.mitigateGrow, target, "2");
+    if (threads.mitigateGrow) {
+      ns.run(options.files.weaken, threads.mitigateGrow, target, "mitigateGrow");
+    }
     await ns.sleep(timing.beforeGrow);
     if (threads.grow) {
       ns.run(options.files.grow, threads.grow, target);
@@ -21,7 +26,6 @@ async function batchCycle(ns, { target, threads, timing, options }) {
     if (threads.hack) {
       ns.run(options.files.hack, threads.hack, target);
     }
-    await ns.sleep(options.delay);
   }
 }
 

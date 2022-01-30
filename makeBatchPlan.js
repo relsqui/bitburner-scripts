@@ -14,11 +14,10 @@ function getThreadRatio(ns, host, target) {
   }
 
   let growThreads = 0;
-  let growSecChange = 0;
-  if (atMinSec && !atMaxMoney) {
+  if (hackThreads || !atMaxMoney) {
     growThreads = Math.ceil(ns.growthAnalyze(target, 1 + hackRate, cores));
-    growSecChange = ns.growthAnalyzeSecurity(growThreads);
   }
+  const growSecChange = ns.growthAnalyzeSecurity(growThreads);
 
   const weakenPerThread = ns.weakenAnalyze(1, cores);
   let mitigateHack = 1;
@@ -80,7 +79,7 @@ export function makeBatchPlan(ns, host, target, options) {
   return {host, target, batchSize, ram, threads, timing, options};
 }
 
-export async function deployPlan (ns, host, target, opts) {
+export async function deployBatchPlan(ns, host, target, opts = {}) {
   const options = {
     delay: 500,
     ...opts,
@@ -94,6 +93,8 @@ export async function deployPlan (ns, host, target, opts) {
   }
   const batchPlan = makeBatchPlan(ns, host, target, options);
   const planFile = `batchPlan-${host}.txt`;
+  // write and scp overwrite scripts but not text files for some reason
+  ns.rm(planFile, host);
   await ns.write(planFile, JSON.stringify(batchPlan, null, 2), "w");
   if (host != ns.getHostname()) {
     await ns.scp([planFile, ...Object.values(options.files)], host);
@@ -103,6 +104,6 @@ export async function deployPlan (ns, host, target, opts) {
 
 export async function main(ns) {
   const host = "home";
-  const target = "megacorp";
-  await deployPlan(ns, host, target, {files: {manager: "foo"}});
+  const target = "rho-construction";
+  await deployBatchPlan(ns, host, target);
 }
