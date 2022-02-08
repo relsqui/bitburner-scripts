@@ -51,5 +51,8 @@ export async function main(ns) {
         while (ns.isBusy()) {
             await ns.sleep(10);
         }
+        if (ns.gang.createGang("Slum Snakes")) {
+            break;
+        }
     }
 }
