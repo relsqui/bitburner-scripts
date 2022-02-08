@@ -39,7 +39,7 @@ export async function main(ns) {
 	const target = ns.args[0];
 	const startingRam = 16;
 	const delay = 150;
-	const buying = false;
+	const buying = true;
 	if (!target) {
 		ns.tprint("Need a target.");
 		ns.exit();

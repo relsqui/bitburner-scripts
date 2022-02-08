@@ -3,9 +3,9 @@
 export async function main(ns) {
 	const start = Date.now();
 	ns.run("find-contracts.js", 1, "loop");
-	// ns.run("runGang.js");
-	// ns.tail(ns.run("loop.js"));
-	ns.run("loop.js");
+	ns.run("runGang.js");
+	const pid = ns.run("loop.js");
+	// ns.tail(pid);
 	ns.universityCourse("Rothman University", "Study Computer Science", false);
 	while (!ns.getPlayer().tor && !ns.purchaseTor()) {
 		await ns.sleep(2000);

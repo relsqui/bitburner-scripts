@@ -1,45 +1,45 @@
 {
   "host": "home",
-  "target": "sigma-cosmetics",
-  "batchSize": 19,
-  "batchCount": 1,
-  "maxBatchCount": 49,
+  "target": "the-hub",
+  "batchSize": 0,
+  "batchCount": 0,
+  "maxBatchCount": 4263,
   "sizeDetails": {
-    "maxPossibleSize": 19,
-    "maxUsefulHack": 1445,
+    "maxPossibleSize": 0,
+    "maxUsefulHack": 0,
     "maxUsefulGrow": 0,
-    "maxUsefulSize": 1445
+    "maxUsefulSize": 0
   },
   "ram": {
-    "minimumRam": 11.85,
-    "ramPerBatch": 225.15,
-    "freeRam": 226.8
+    "minimumRam": 4.75,
+    "ramPerBatch": 0,
+    "freeRam": 0
   },
   "threadRatio": {
-    "hack": 1,
-    "hackRate": 0.0006922956112677247,
-    "hackSecChange": 0.002,
-    "grow": 2,
-    "growSecChange": 0.008,
-    "mitigateHack": 1,
+    "hack": 0,
+    "hackRate": 0,
+    "hackSecChange": 0,
+    "grow": 0,
+    "growSecChange": 0,
+    "mitigateHack": 0,
     "mitigateGrow": 1
   },
   "threads": {
-    "hack": 19,
-    "grow": 38,
-    "mitigateHack": 19,
-    "mitigateGrow": 19
+    "hack": 0,
+    "grow": 0,
+    "mitigateHack": 0,
+    "mitigateGrow": 0
   },
   "timing": {
-    "eta": 29649.906538046795,
-    "etaString": "0:00:30",
-    "wTime": 29349.906538046795,
-    "gTime": 23479.92523043744,
-    "hTime": 7337.476634511699,
+    "eta": 2558073.8746314603,
+    "etaString": "0:42:38",
+    "wTime": 2557773.8746314603,
+    "gTime": 2046219.0997051685,
+    "hTime": 639443.4686578651,
     "betweenBatches": 600,
     "beforeWeaken": 300,
-    "beforeGrow": 5720,
-    "beforeHack": 15843
+    "beforeGrow": 511405,
+    "beforeHack": 1406476
   },
   "options": {
     "delay": 150,
