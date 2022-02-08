@@ -1,0 +1,16 @@
+securityThreshold = 1.1;
+moneyThreshold = 0.5;
+
+target = args[0];
+minSecurity = getServerMinSecurityLevel(target);
+while (true) {
+  oldSecurity = getServerSecurityLevel(target);
+  while (oldSecurity > minSecurity * securityThreshold) {
+    weaken(target);
+    oldSecurity = getServerSecurityLevel(target);
+  }
+  while (getServerMoneyAvailable(target) < getServerMaxMoney(target) * moneyThreshold) {
+    grow(target);
+  }
+  hack(target);
+}

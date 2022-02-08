@@ -1,0 +1,55 @@
+{
+  "host": "home",
+  "target": "sigma-cosmetics",
+  "batchSize": 19,
+  "batchCount": 1,
+  "maxBatchCount": 49,
+  "sizeDetails": {
+    "maxPossibleSize": 19,
+    "maxUsefulHack": 1445,
+    "maxUsefulGrow": 0,
+    "maxUsefulSize": 1445
+  },
+  "ram": {
+    "minimumRam": 11.85,
+    "ramPerBatch": 225.15,
+    "freeRam": 226.8
+  },
+  "threadRatio": {
+    "hack": 1,
+    "hackRate": 0.0006922956112677247,
+    "hackSecChange": 0.002,
+    "grow": 2,
+    "growSecChange": 0.008,
+    "mitigateHack": 1,
+    "mitigateGrow": 1
+  },
+  "threads": {
+    "hack": 19,
+    "grow": 38,
+    "mitigateHack": 19,
+    "mitigateGrow": 19
+  },
+  "timing": {
+    "eta": 29649.906538046795,
+    "etaString": "0:00:30",
+    "wTime": 29349.906538046795,
+    "gTime": 23479.92523043744,
+    "hTime": 7337.476634511699,
+    "betweenBatches": 600,
+    "beforeWeaken": 300,
+    "beforeGrow": 5720,
+    "beforeHack": 15843
+  },
+  "options": {
+    "delay": 150,
+    "homeReservedRam": 100,
+    "deploy": true,
+    "files": {
+      "manager": "manageBatch.js",
+      "hack": "just-hack.js",
+      "weaken": "just-weaken.js",
+      "grow": "just-grow.js"
+    }
+  }
+}

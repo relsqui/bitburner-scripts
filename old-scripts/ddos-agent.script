@@ -1,0 +1,38 @@
+var signalPort = 1;
+var targetPort = 2;
+var logPort = 3;
+var id = args[0];
+var threads = args[1];
+
+function log(message) {
+  var fullMessage = ["[" + id + "]", threads, message].join(" ");
+  while (!tryWritePort(logPort, fullMessage)) {
+    print("waiting for log port ...");
+    sleep(1);
+  }
+  print(fullMessage);
+}
+
+signals = {
+  "weaken": weaken,
+  "grow": grow,
+  "hack": hack,
+};
+
+// stagger agents so they don't stop/start at the same time
+sleep(Math.random() * 60000);
+while (true) {
+  var signal = peek(signalPort);
+  var target;
+  if (signal in signals) {
+    do {
+      target = peek(targetPort);
+    } while (target == "NULL PORT DATA");
+    if (signal == "hold") continue;
+    log("starting: " + signal + " " + target);
+    print(Date());
+    signals[signal](target);
+    log("finished: " + signal + " " + target);
+  }
+  sleep(10);
+}

@@ -1,0 +1,7 @@
+signalPort = 1;
+targetPort = 2;
+logPort = 3;
+
+clearPort(targetPort);
+writePort(targetPort, args[0]);
+writePort(logPort, "[player] aim at " + args[0]);
