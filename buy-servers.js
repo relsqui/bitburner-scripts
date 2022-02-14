@@ -23,14 +23,6 @@ function ramString(ns) {
 	return ns.nFormat(ram * 1000000000, ramFormat);
 }
 
-async function maybeDeploy(ns, hostname) {
-	let target = ns.args[1] || ns.args[0];
-	if (target == "loop" || !target) {
-		return;
-	}
-	await ns.run("deploy.js", 1, hostname, target);
-}
-
 export async function main(ns) {
 	ns.disableLog("sleep");
 	ns.disableLog("getServerMoneyAvailable");
@@ -42,7 +34,6 @@ export async function main(ns) {
 		let newServer = await buyServer(ns);
 		if (newServer) {
 			ns.toast("Bought " + newServer + " with " + ramString(ns), "info");
-			await maybeDeploy(ns, newServer);
 			purchasedServers = ns.getPurchasedServers();
 			await ns.sleep(1);
 		} else {
@@ -59,23 +50,23 @@ export async function main(ns) {
 			if (ns.getServerMaxRam(server) < ram) {
 				while (!canAffordServer(ns)) {
 					if (loop) {
-						await ns.sleep(30000);
+						await ns.sleep(1000);
 					} else {
 						return;
 					}
 				}
+				// ns.print(`Waiting for ${server} to stop running processes`);
+				// while (ns.ps(server).length > 0) {
+				// 	await ns.sleep(1000);
+				// }
 				ns.print(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`);
-				ns.toast(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`, "success");
 				ns.killall(server);
 				ns.deleteServer(server);
 				purchasedServers[i] = await buyServer(ns);
-				await maybeDeploy(ns, purchasedServers[i]);
 			}
 		}
-		do {
-			ram *= 2;
-		} while (canAffordServer(ns, 2));
-		if (ram == 2097152) {
+		ram *= 2;
+		if (ram > ns.getPurchasedServerMaxRam()) {
 			ns.tprint("Maximum server size reached. Have a nice day!");
 			break;
 		} else {

@@ -60,9 +60,8 @@ function getTiming(ns, target, delay) {
 function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 	const minimumRam = (threadRatio.hack * ns.getScriptRam(options.files.hack, host)) +
 		(threadRatio.grow * ns.getScriptRam(options.files.grow, host)) +
-		((threadRatio.mitigateHack + threadRatio.mitigateGrow) * ns.getScriptRam(options.files.weaken, host)) +
-		ns.getScriptRam(options.files.manager);
-	let freeRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
+		((threadRatio.mitigateHack + threadRatio.mitigateGrow) * ns.getScriptRam(options.files.weaken, host));
+	let freeRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - ns.getScriptRam(options.files.manager, host);
 	if (host == "home") {
 		// leave some breathing room
 		freeRam = Math.max(0, freeRam - options.homeReservedRam);
@@ -91,14 +90,14 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 		// TODO: predict useful weaken amount when that's all we're doing
 		maxUsefulWeaken = maxPossibleSize;
 	}
+	// TODO: pretty sure this is buggy
 	const maxUsefulSize = Math.max(maxUsefulHack, maxUsefulGrow, maxUsefulWeaken);
 	const idealSize = Math.ceil(maxUsefulSize / maxBatchCount);
-	const batchSize = Math.min(idealSize, maxPossibleSize, maxUsefulSize);
+	const batchSize = Math.min(/*idealSize,*/ maxPossibleSize, maxUsefulSize);
 	const maxPossibleBatches = Math.floor(freeRam / (minimumRam * batchSize));
-	// const batchCount = Math.min(maxBatchCount, maxPossibleBatches);
-	const batchCount = maxPossibleBatches;
+	const batchCount = Math.min(maxBatchCount, maxPossibleBatches);
 	const sizeDetails = { maxPossibleSize, maxUsefulHack, maxUsefulGrow, maxUsefulSize };
-	const ram = { minimumRam, ramPerBatch: minimumRam * batchSize , freeRam};
+	const ram = { minimumRam, ramPerBatch: minimumRam * batchSize, freeRam };
 	return [batchSize, sizeDetails, batchCount, ram];
 }
 
@@ -130,7 +129,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 		deploy: true,
 		...opts,
 		files: {
-			manager: "manageBatch.js",
+			manager: "manageBatches.js",
 			hack: "just-hack.js",
 			weaken: "just-weaken.js",
 			grow: "just-grow.js",

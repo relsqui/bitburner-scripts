@@ -10,7 +10,7 @@ export async function main(ns) {
     const favorSoFar = ns.getFactionFavor(faction);
     let favorGain;
     do {
-        ns.workForFaction("Daedalus", "Hacking Contracts", false);
+        ns.workForFaction(faction, ns.args[1] || "Hacking Contracts", false);
         favorGain = ns.getFactionFavorGain(faction);
         ns.clearLog();
         ns.print(`(${fmt(favorSoFar)} + ${fmt(favorGain)}) / ${neededFavor} favor`);

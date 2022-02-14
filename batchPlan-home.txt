@@ -1,52 +1,52 @@
 {
   "host": "home",
-  "target": "the-hub",
-  "batchSize": 0,
-  "batchCount": 0,
-  "maxBatchCount": 4263,
+  "target": "nwo",
+  "batchSize": 487,
+  "batchCount": 19,
+  "maxBatchCount": 179,
   "sizeDetails": {
-    "maxPossibleSize": 0,
+    "maxPossibleSize": 9283,
     "maxUsefulHack": 0,
-    "maxUsefulGrow": 0,
-    "maxUsefulSize": 0
+    "maxUsefulGrow": 487,
+    "maxUsefulSize": 487
   },
   "ram": {
-    "minimumRam": 4.75,
-    "ramPerBatch": 0,
-    "freeRam": 0
+    "minimumRam": 3.5,
+    "ramPerBatch": 1704.5,
+    "freeRam": 32491.8
   },
   "threadRatio": {
     "hack": 0,
     "hackRate": 0,
     "hackSecChange": 0,
-    "grow": 0,
-    "growSecChange": 0,
+    "grow": 1,
+    "growSecChange": 0.004,
     "mitigateHack": 0,
     "mitigateGrow": 1
   },
   "threads": {
     "hack": 0,
-    "grow": 0,
+    "grow": 487,
     "mitigateHack": 0,
-    "mitigateGrow": 0
+    "mitigateGrow": 487
   },
   "timing": {
-    "eta": 2558073.8746314603,
-    "etaString": "0:42:38",
-    "wTime": 2557773.8746314603,
-    "gTime": 2046219.0997051685,
-    "hTime": 639443.4686578651,
-    "betweenBatches": 600,
-    "beforeWeaken": 300,
-    "beforeGrow": 511405,
-    "beforeHack": 1406476
+    "eta": 71627.95066283479,
+    "etaString": "0:01:12",
+    "wTime": 71427.95066283479,
+    "gTime": 57142.36053026783,
+    "hTime": 17856.987665708697,
+    "betweenBatches": 400,
+    "beforeWeaken": 200,
+    "beforeGrow": 14186,
+    "beforeHack": 39086
   },
   "options": {
-    "delay": 150,
+    "delay": 100,
     "homeReservedRam": 100,
     "deploy": true,
     "files": {
-      "manager": "manageBatch.js",
+      "manager": "manageBatches.js",
       "hack": "just-hack.js",
       "weaken": "just-weaken.js",
       "grow": "just-grow.js"

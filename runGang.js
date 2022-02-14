@@ -7,10 +7,10 @@ function averageEnemyRate() {
 	return enemyRates.reduce((a, b) => a + b) / enemyRates.length;
 }
 
-async function waitForTick(ns, getEnemy) {
-	const oldPower = getEnemy().power;
-	while (oldPower == getEnemy().power) {
-		await ns.sleep(10);
+async function waitForTick(ns, infoFn) {
+	const oldPower = infoFn().power;
+	while (oldPower == infoFn().power) {
+		await ns.sleep(1);
 	}
 	ns.print("Tick!");
 }
@@ -34,7 +34,7 @@ async function maybeAscend(ns, name) {
 	if ((agi + cha + def + dex + str) / 5 >= 2) {
 		if (ns.gang.ascendMember(name)) {
 			ns.print(`Ascended ${name}!`);
-			ns.toast(`Ascended ${name}!`, "success");
+			ns.toast(`Ascended ${name}!`, "success", 4000);
 		}
 	}
 }
@@ -44,6 +44,7 @@ async function equipEveryone(ns, gangMembers, equipment) {
 		for (let name of gangMembers) {
 			if (ns.gang.purchaseEquipment(name, equip)) {
 				ns.print(`Bought ${equip} for ${name}.`);
+				ns.toast(`Bought ${equip} for ${name}.`, "info");
 			}
 		}
 	}
@@ -80,7 +81,7 @@ async function assignTasksForTick(ns, enemy, getEnemy, gangMembers, enableTerrit
 		// figure out when that will change.
 		// their change rate is inconsistent so we just use the average:
 		// enemy power after t ticks = enemyAverage * t + newEnemyPower
-		// we consistently accelerate. we'll estimate the rate of change
+		// we consistently accelerate, so we'll estimate our rate of change
 		// as the average of our last and current change rates:
 		// our power after t ticks = (ourChange + ourLastChange)/2 * t + newPower
 		// we overtake them when those two values are equal:
@@ -164,21 +165,19 @@ function bestTaskFor(ns, memberStats, gang, taskTable, priority) {
 		.sort((a, b) => value(b) - value(a));
 }
 
-function setTasks(ns, priority, gangMembers, taskTable) {
-	// assign tasks from most to least powerful
-	// gangMembers = gangMembers.slice().reverse();
+function setTasks(ns, priority, taskTable) {
 	let wantedGainSoFar = 0;
+	const gangMembers = ns.gang.getMemberNames();
+	gangMembers.sort((a, b) => averageCombatMult(ns, b) - averageCombatMult(ns, a));
 	for (let member of gangMembers) {
-		const stats = ns.gang.getMemberInformation(member);
 		const gang = ns.gang.getGangInformation();
+		const stats = ns.gang.getMemberInformation(member);
 		let tasks = bestTaskFor(ns, stats, gang, taskTable, priority);
-		if (!stats) {
-			// they died this tick
-			continue;
-		}
 		let task = "Train Combat";
 		if (tasks.length > 0) {
-			tasks = tasks.filter((task) => 0 > wantedGainSoFar + ns.formulas.gang.wantedLevelGain(gang, stats, taskTable[task]));
+			if (gang.wantedPenalty < 0.99) {
+				tasks = tasks.filter((task) => 0 > wantedGainSoFar + ns.formulas.gang.wantedLevelGain(gang, stats, taskTable[task]));
+			}
 			if (tasks.length == 0) {
 				task = "Vigilante Justice";
 			} else {
@@ -191,12 +190,19 @@ function setTasks(ns, priority, gangMembers, taskTable) {
 	}
 }
 
+function choosePriority(ns) {
+	if (ns.getServerMoneyAvailable("home") < 1000000 ||
+		ns.getFactionRep(ns.gang.getGangInformation().faction) > 2500000) {
+		return "money";
+	}
+	return "respect";
+}
+
 export async function main(ns) {
 	ns.disableLog("ALL");
 	const buying = true;
 	const enableTerritory = true;
-	const buildPower = true;
-	const tickSpacing = 19000;
+	const tickSpacing = 17500;
 	const [biggestEnemy, enemyPower] = getBiggestEnemy(ns);
 	ns.print(`Biggest enemy is ${biggestEnemy} with ${enemyPower} power.`);
 	const enemyInfoFn = () => ns.gang.getOtherGangInformation()[biggestEnemy];
@@ -205,21 +211,26 @@ export async function main(ns) {
 	await waitForTick(ns, enemyInfoFn);
 	const taskTable = getTaskTable(ns);
 	while (true) {
+		const { power, territory } = ns.gang.getGangInformation();
+		const buildPower = territory < 1 || power < enemyInfoFn().power;
 		if (buildPower) {
 			// this is spammy when there's not much else going on each tick
 			ns.print(`Sleeping for ${tickSpacing} ms.`);
 		}
 		await ns.sleep(tickSpacing);
 		maybeRecruit(ns);
-		const gangMembers = ns.gang.getMemberNames();
+		let gangMembers = ns.gang.getMemberNames();
 		gangMembers.sort((a, b) => averageCombatMult(ns, b) - averageCombatMult(ns, a));
-		const priority = ns.args[0] || (gangMembers.length < 12 ? "respect" : "money");
+		const priority = ns.args[0] || choosePriority(ns);
 		ns.print(`Prioritizing ${priority}`);
 		if (buildPower) {
 			await assignTasksForTick(ns, biggestEnemy, enemyInfoFn, gangMembers, enableTerritory);
 		}
-		setTasks(ns, priority, gangMembers, taskTable);
+		setTasks(ns, priority, taskTable);
 		if (buying) {
+			// do this again because they can die during the tick
+			gangMembers = ns.gang.getMemberNames();
+			gangMembers.sort((a, b) => averageCombatMult(ns, b) - averageCombatMult(ns, a));
 			for (let member of gangMembers) {
 				maybeAscend(ns, member);
 			}

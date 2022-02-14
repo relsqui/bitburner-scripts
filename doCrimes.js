@@ -20,7 +20,11 @@ function getCrimeValues(ns, priority) {
     for (let crime of crimes) {
         const crimeStats = ns.getCrimeStats(crime);
         // using endswith lets us use 'exp' or 'xp' to combine all stat xp
-        const relevantKeys = Object.keys(crimeStats).filter((k) => k.endsWith(priority));
+        let relevantKeys = Object.keys(crimeStats).filter((k) => k.endsWith(priority));
+        if (relevantKeys.length == 0) {
+            // if that didn't work, check for 'hack' or 'int' etc.
+            relevantKeys = Object.keys(crimeStats).filter((k) => k.startsWith(priority));
+        }
         const relevantValues = relevantKeys.map((k) => crimeStats[k]);
         crimeValues[crime] = relevantValues.reduce((a, b) => a + b) / crimeStats.time;
     }
@@ -51,7 +55,10 @@ export async function main(ns) {
         while (ns.isBusy()) {
             await ns.sleep(10);
         }
-        if (ns.gang.createGang("Slum Snakes")) {
+        if (priority == "karma" && ns.gang.createGang("Slum Snakes")) {
+            ns.run("runGang.js");
+            ns.run("watchGang.js");
+            ns.workForFaction("NiteSec", "Hacking Contracts", true);
             break;
         }
     }
