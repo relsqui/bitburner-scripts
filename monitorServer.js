@@ -5,7 +5,7 @@ export function autocomplete(data, args) {
 }
 
 export async function main(ns) {
-	const refreshRate = 2;
+	const refreshRate = 1;
 	const host = ns.args[0] || ns.getHostname();
 	ns.disableLog("ALL");
 	ns.tail();

@@ -82,6 +82,8 @@ export async function main(ns) {
                     assignTask(ns, i, "setToCommitCrime", "Homicide");
                 }
             } else if (ns.sleeve.getTask(i).task == "Idle") {
+                assignTask(ns, i, "setToCommitCrime", "Heist");
+                continue;
                 let course = "Study Computer Science";
                 if (ns.getServerMoneyAvailable("home") > 100000000) {
                     ns.sleeve.travel(i, "Volhaven");
@@ -92,8 +94,6 @@ export async function main(ns) {
                 } else {
                     ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
                 }
-            } else {
-                assignTask(ns, i, "setToCommitCrime", "Heist");
             }
             rows.push(formatStats(ns, i));
         }

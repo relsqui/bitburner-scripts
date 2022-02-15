@@ -1,6 +1,7 @@
 /** @param {NS} ns **/
 
 import { makeTable } from './table.js';
+import { hosts_by_distance } from './breadth-first.js';
 
 const memBlocks = 6;
 const moneyBlocks = 6;
@@ -72,18 +73,28 @@ export async function main(ns) {
     ns.disableLog("ALL");
     while (true) {
         ns.clearLog();
-        const hosts = ns.getPurchasedServers();
-        hosts.sort((a, b) => hostnameToNumber(a) - hostnameToNumber(b));
-        const labels = ["Host", "Size", "Memory", "W", "G", "H", "Target", "Max $", "Curr $", "Sec"];
+        const targets = hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
+            .filter((t) => ns.getServerMaxMoney(t) > 0)
+            .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
+            .slice(0, 20);
+        const labels = ["Target", "Max $", "Cur$", "CurSec"]; //, "Host", "Mem", "ETA"];
         const data = [];
-        for (let host of hosts) {
-            const maxMem = ns.nFormat(ns.getServerMaxRam(host) * 1000000000, "0b");
-            const memString = makeMeter(ns.getServerMaxRam(host), ns.getServerUsedRam(host), memBlocks);
-            const [target, weakenThreads, growThreads, hackThreads] = countBatchProcesses(ns, host);
-            const targetStats = getTargetStats(ns, target);
-            data.push([host, maxMem, memString, weakenThreads, growThreads, hackThreads, ellipsis(target, 10), ...targetStats]);
+        for (let target of targets) {
+            const [maxMoney, money, security] = getTargetStats(ns, target);
+            data.push([target, maxMoney, money, security]);
         }
+        // const hosts = ns.getPurchasedServers();
+        // hosts.sort((a, b) => hostnameToNumber(a) - hostnameToNumber(b));
+        // const labels = ["Host", "Size", "Memory", "W", "G", "H", "Target", "Max $", "Curr $", "Sec"];
+        // const data = [];
+        // for (let host of hosts) {
+        //     const maxMem = ns.nFormat(ns.getServerMaxRam(host) * 1000000000, "0b");
+        //     const memString = makeMeter(ns.getServerMaxRam(host), ns.getServerUsedRam(host), memBlocks);
+        //     const [target, weakenThreads, growThreads, hackThreads] = countBatchProcesses(ns, host);
+        //     const targetStats = getTargetStats(ns, target);
+        //     data.push([host, maxMem, memString, weakenThreads, growThreads, hackThreads, ellipsis(target, 10), ...targetStats]);
+        // }
         ns.print(makeTable(ns, data, labels));
-        await ns.sleep(100);
+        await ns.sleep(1);
     }
 }

@@ -15,19 +15,18 @@ function targetValue(ns, host) {
 	return maxMoney * successChance / eta;
 }
 
-function findTargets(ns, knownTargets = []) {
+function findTargets(ns) {
 	const newTargets = [];
 	for (let host of hosts_by_distance(ns)) {
 		// TODO: don't hardcode the name scheme
 		if (host.startsWith("warthog") ||
-			knownTargets.includes(host) ||
 			ns.getServerMaxMoney(host) == 0) {
 			continue;
 		}
 		newTargets.push(host);
 	}
 	newTargets.sort((a, b) => targetValue(ns, b) - targetValue(ns, a));
-	return [...knownTargets, ...newTargets];
+	return newTargets;
 }
 
 function hasMemory(ns, host) {
@@ -45,7 +44,7 @@ function findHosts(ns) {
 function hasEnoughMemory(ns, host, oldPlans, newPlan) {
 	let allottedRam = 0;
 	for (let target of Object.keys(oldPlans)) {
-		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch);
+		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch * plan.maxBatches);
 	}
 	return allottedRam + newPlan.ram.ramPerBatch < ns.getServerMaxRam(host);
 }
@@ -80,7 +79,7 @@ function updateAttackers(plans) {
 }
 
 export async function sendBatches(ns) {
-	const delay = 50;
+	const delay = 100;
 	ns.disableLog("ALL");
 	let attackers = {};
 	let plans = {};
@@ -93,14 +92,15 @@ export async function sendBatches(ns) {
 		for (let target of targets) {
 			plans = clearFinished(ns, plans);
 			attackers = updateAttackers(plans);
-			if (attackers[target]) {
+			const host = hosts[hostIndex];
+			if (attackers[target] && attackers[target] != host) {
 				continue;
 			}
-			const host = hosts[hostIndex];
 			plans[host] = plans[host] || {};
 			plans[host][target] = plans[host][target] || {};
 			const batchPlan = await deployBatchPlan(ns, host, target, { delay });
-			if (batchPlan.batchCount > 0 && hasEnoughMemory(ns, host, plans[host], batchPlan)) {
+			if (batchPlan.batchCount > 0 &&
+				(attackers[target] == host || hasEnoughMemory(ns, host, plans[host], batchPlan))) {
 				ns.print(`Deploying ${host} to hack ${target}, eta: ${batchPlan.timing.etaString}`);
 				ns.exec(batchPlan.options.files.manager, host, 1, host, target, batch);
 				attackers[target] = host;
@@ -112,7 +112,7 @@ export async function sendBatches(ns) {
 				break;
 			}
 		}
-		await ns.sleep(10);
+		await ns.sleep(1);
 		batch++;
 	}
 }

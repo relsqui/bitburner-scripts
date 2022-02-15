@@ -20,8 +20,8 @@ export async function call(ns, endpoint, payload) {
 
 export async function main(ns) {
     const payload = {
-        type: "Subarray with Maximum Sum",
-        data: [5,10,5,-7,0,2,10,3,5,2,1,-1,4,8,0,-2,1,0,-2,6,-7,-7,-9,-5,7,7,4,-6,7,8,5,-1,-2,6],
+        type: "Generate IP Addresses",
+        data: 2502948,
     }
     const response = await call(ns, "contract", payload);
     ns.tprint(JSON.stringify(response, null, 2));
