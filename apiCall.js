@@ -20,10 +20,9 @@ export async function call(ns, endpoint, payload) {
 
 export async function main(ns) {
     const payload = {
-        type: "Spiralize Matrix",
-        data: [[1]],
+        type: "Subarray with Maximum Sum",
+        data: [5,10,5,-7,0,2,10,3,5,2,1,-1,4,8,0,-2,1,0,-2,6,-7,-7,-9,-5,7,7,4,-6,7,8,5,-1,-2,6],
     }
-    // const payload = {"type":"Spiralize Matrix","data":[[25,20,37,41,49,40,44,42],[41,34,9,33,19,17,50,14],[40,9,39,44,15,33,18,21],[24,34,35,50,21,29,5,12],[46,4,7,20,29,18,11,39],[18,49,24,2,36,40,32,36],[23,38,31,16,9,45,21,31],[36,12,39,44,15,29,13,34],[30,6,19,45,33,4,37,26],[12,24,22,31,45,10,13,25],[49,30,50,39,25,42,44,4],[11,7,30,15,37,8,41,10]]};
     const response = await call(ns, "contract", payload);
     ns.tprint(JSON.stringify(response, null, 2));
 }

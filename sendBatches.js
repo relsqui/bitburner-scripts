@@ -34,61 +34,86 @@ function hasMemory(ns, host) {
 	return ns.getServerMaxRam(host) > 16;
 }
 
-function notRunningABatch(ns, host) {
-	const processes = ns.ps(host);
-	for (let p of processes) {
-		// TODO: don't hardcode this filename
-		if (p.filename == "manageBatches.js") {
-			return false;
-		}
-	}
-	return true;
-}
-
 function findHosts(ns) {
 	const hosts = ["home", ...ns.getPurchasedServers()]
 		.filter((h) => hasMemory(ns, h))
-		.filter((h) => notRunningABatch(ns, h))
-		.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a));
+		.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a) ||
+			ns.getServer(b).cpuCores - ns.getServer(a).cpuCores);
 	return hosts;
 }
 
-export async function sendBatches(ns) {
-	const delay = 100;
-	let targets = [];
-	let nextTarget = -1;
-	function getNextTarget() {
-		targets = findTargets(ns, targets);
-		nextTarget = (nextTarget + 1) % targets.length;
-		return targets[nextTarget];
+function hasEnoughMemory(ns, host, oldPlans, newPlan) {
+	let allottedRam = 0;
+	for (let target of Object.keys(oldPlans)) {
+		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch);
 	}
+	return allottedRam + newPlan.ram.ramPerBatch < ns.getServerMaxRam(host);
+}
 
+function clearFinished(ns, allPlans) {
+	const newPlans = {};
+	for (let host of Object.keys(allPlans)) {
+		newPlans[host] = {};
+		// TODO: get filename from plan
+		const managers = ns.ps(host).filter((p) => p.filename == "manageBatches.js");
+		const plans = allPlans[host];
+		for (let manager of managers) {
+			if (manager.args.length < 3) {
+				manager.args[2] = 0;
+			}
+			const [host, target, batch] = manager.args;
+			newPlans[host][target] = newPlans[host][target] || {};
+			newPlans[host][target][batch] = plans[target][batch];
+		}
+	}
+	return newPlans;
+}
+
+function updateAttackers(plans) {
+	const newAttackers = {};
+	for (let host of Object.keys(plans)) {
+		for (let target of Object.keys(plans[host])) {
+			newAttackers[target] = host;
+		}
+	}
+	return newAttackers;
+}
+
+export async function sendBatches(ns) {
+	const delay = 50;
 	ns.disableLog("ALL");
+	let attackers = {};
+	let plans = {};
 
-	/*
-	next iteration: make both lists at the top of the loop, once
-	keep track of who's on who so you can display the whole set
-	but keep all the skip logic and stuff; if we restart the script,
-	just show the ones we know about (that start ater this starts)
-	... also fix batch sizing so we stop overhacking
-	... also enable multiple targets per host so we stop UNDERhacking
-	*/
-
+	let batch = 0;
 	while (true) {
 		const hosts = findHosts(ns);
-		for (let host of hosts) {
-			const target = getNextTarget();
+		const targets = findTargets(ns);
+		let hostIndex = 0;
+		for (let target of targets) {
+			plans = clearFinished(ns, plans);
+			attackers = updateAttackers(plans);
+			if (attackers[target]) {
+				continue;
+			}
+			const host = hosts[hostIndex];
+			plans[host] = plans[host] || {};
+			plans[host][target] = plans[host][target] || {};
 			const batchPlan = await deployBatchPlan(ns, host, target, { delay });
-			ns.exec(batchPlan.options.files.manager, host, 1, host);
-			ns.print(`Deploying ${host} to hack ${target}, eta: ${batchPlan.timing.etaString}`);
-			if (batchPlan.batchCount == 0) {
-				ns.print("Batch count is 0!");
+			if (batchPlan.batchCount > 0 && hasEnoughMemory(ns, host, plans[host], batchPlan)) {
+				ns.print(`Deploying ${host} to hack ${target}, eta: ${batchPlan.timing.etaString}`);
+				ns.exec(batchPlan.options.files.manager, host, 1, host, target, batch);
+				attackers[target] = host;
+				plans[host][target][batch] = batchPlan;
+			} else {
+				hostIndex++;
+			}
+			if (hostIndex >= hosts.length) {
+				break;
 			}
 		}
-		if (hosts.length > 0) {
-			ns.print("---");
-		}
-		await ns.sleep(10000);
+		await ns.sleep(10);
+		batch++;
 	}
 }
 

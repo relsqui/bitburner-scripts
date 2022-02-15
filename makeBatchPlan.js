@@ -60,8 +60,9 @@ function getTiming(ns, target, delay) {
 function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 	const minimumRam = (threadRatio.hack * ns.getScriptRam(options.files.hack, host)) +
 		(threadRatio.grow * ns.getScriptRam(options.files.grow, host)) +
+		ns.getScriptRam(options.files.manager, host) +
 		((threadRatio.mitigateHack + threadRatio.mitigateGrow) * ns.getScriptRam(options.files.weaken, host));
-	let freeRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host) - ns.getScriptRam(options.files.manager, host);
+	let freeRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
 	if (host == "home") {
 		// leave some breathing room
 		freeRam = Math.max(0, freeRam - options.homeReservedRam);
@@ -92,12 +93,11 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 	}
 	// TODO: pretty sure this is buggy
 	const maxUsefulSize = Math.max(maxUsefulHack, maxUsefulGrow, maxUsefulWeaken);
-	const idealSize = Math.ceil(maxUsefulSize / maxBatchCount);
-	const batchSize = Math.min(/*idealSize,*/ maxPossibleSize, maxUsefulSize);
+	const batchSize = Math.min(maxPossibleSize, maxUsefulSize);
 	const maxPossibleBatches = Math.floor(freeRam / (minimumRam * batchSize));
 	const batchCount = Math.min(maxBatchCount, maxPossibleBatches);
 	const sizeDetails = { maxPossibleSize, maxUsefulHack, maxUsefulGrow, maxUsefulSize };
-	const ram = { minimumRam, ramPerBatch: minimumRam * batchSize, freeRam };
+	const ram = { minimumRam, ramPerBatch: minimumRam * maxBatchCount, freeRam };
 	return [batchSize, sizeDetails, batchCount, ram];
 }
 
@@ -138,10 +138,9 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 	}
 	const batchPlan = makeBatchPlan(ns, host, target, options);
 	if (options.deploy) {
-		const planFile = `batchPlan-${host}.txt`;
+		const planFile = `batchPlan_${host}_${target}.txt`;
 		if (ns.fileExists(planFile, host)) {
-			// these files get read a lot, make sure
-			// it actually gets deleted
+			// these files get read a lot, make sure it actually gets deleted
 			while (!ns.rm(planFile, host)) {
 				await ns.sleep(10);
 			}
@@ -149,7 +148,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 		await ns.write(planFile, JSON.stringify(batchPlan, null, 2), "w");
 		if (host != ns.getHostname()) {
 			await ns.scp([planFile, ...Object.values(options.files)], host);
-			ns.rm(planFile);
+			await ns.rm(planFile);
 		}
 
 	}
@@ -158,6 +157,6 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 
 export async function main(ns) {
 	const [host, target] = ns.args;
-	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: false });
-	ns.tprint(JSON.stringify(batchPlan, null, 2));
+	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: true });
+	// ns.tprint(JSON.stringify(batchPlan, null, 2));
 }

@@ -26,10 +26,10 @@ export async function main(ns) {
 	if (ns.getPlayer().hacking < 2500 && ns.getServerMoneyAvailable("home") > 200000 && ns.travelToCity("Volhaven")) {
 		ns.universityCourse("ZB Institute of Technology", "Algorithms", false);
 	}
-	ns.run("buy-servers.js");
+	// ns.run("buy-servers.js");
 	// give that a sec to suck up all the money
-	await ns.sleep(5000);
-	ns.run("sendBatches.js");
+	// await ns.sleep(5000);
+	// ns.run("sendBatches.js");
 	while (ns.getPlayer().hacking < 2500) {
 		await ns.sleep(1000);
 	}

@@ -28,20 +28,17 @@ async function batchCycle(ns, batch, { host, target, threads, timing, options })
 	if (threads.hack) {
 		ns.run(options.files.hack, threads.hack, target, batch);
 	}
-	while (waitingFor(ns, lastPid)) {
-		await ns.sleep(10);
-	}
+	await ns.sleep(timing.betweenBatches);
 }
 
 export async function main(ns) {
-	const host = ns.args[0];
-	ns.print(`Managing batches on ${host}`);
-	const planFile = `batchPlan-${host}.txt`;
+	const [host, target] = ns.args.slice(0, 2);
+	const batch = ns.args[2] || 0;
+	ns.print(`Managing batches from ${host} to ${target}`);
+	const planFile = `batchPlan_${host}_${target}.txt`;
 	const rawPlan = ns.read(planFile);
 	ns.print("Starting this plan:");
 	ns.print(rawPlan);
 	const batchPlan = JSON.parse(rawPlan);
-	for (let batch = 0; batch < batchPlan.batchCount; batch++) {
-		await batchCycle(ns, batch, batchPlan);
-	}
+	await batchCycle(ns, batch, batchPlan);
 }
