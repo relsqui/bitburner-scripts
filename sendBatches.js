@@ -1,6 +1,7 @@
 /** @param {NS} ns **/
 import { hosts_by_distance } from "./breadth-first.js";
 import { deployBatchPlan } from './makeBatchPlan.js';
+import { buildMonitorTable } from './watchBatches.js';
 
 export function autocomplete(data, args) {
 	return [...data.servers];
@@ -26,15 +27,16 @@ function findTargets(ns) {
 		newTargets.push(host);
 	}
 	newTargets.sort((a, b) => targetValue(ns, b) - targetValue(ns, a));
-	return newTargets;
+	return newTargets.filter(ns.hasRootAccess);
 }
 
 function hasMemory(ns, host) {
-	return ns.getServerMaxRam(host) > 16;
+	return ns.getServerMaxRam(host) >= 16;
 }
 
 function findHosts(ns) {
-	const hosts = ["home", ...ns.getPurchasedServers()]
+	const hosts = ["home", ...hosts_by_distance(ns)]
+		.filter(ns.hasRootAccess)
 		.filter((h) => hasMemory(ns, h))
 		.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a) ||
 			ns.getServer(b).cpuCores - ns.getServer(a).cpuCores);
@@ -43,8 +45,11 @@ function findHosts(ns) {
 
 function hasEnoughMemory(ns, host, oldPlans, newPlan) {
 	let allottedRam = 0;
+	if (host == "home") {
+		allottedRam += newPlan.options.homeReservedRam;
+	}
 	for (let target of Object.keys(oldPlans)) {
-		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch * plan.maxBatches);
+		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch * plan.batchCount);
 	}
 	return allottedRam + newPlan.ram.ramPerBatch < ns.getServerMaxRam(host);
 }
@@ -61,8 +66,12 @@ function clearFinished(ns, allPlans) {
 				manager.args[2] = 0;
 			}
 			const [host, target, batch] = manager.args;
-			newPlans[host][target] = newPlans[host][target] || {};
-			newPlans[host][target][batch] = plans[target][batch];
+			if (plans[target] && plans[target][batch]) {
+				// sometimes it doesn't exist if the batch was running
+				// before this script started
+				newPlans[host][target] = newPlans[host][target] || {};
+				newPlans[host][target][batch] = plans[target][batch];
+			}
 		}
 	}
 	return newPlans;
@@ -78,41 +87,78 @@ function updateAttackers(plans) {
 	return newAttackers;
 }
 
+function updateBatchCounts(plans) {
+	const newBatches = {};
+	for (let host of Object.keys(plans)) {
+		for (let target of Object.keys(plans[host])) {
+			for (let batch of Object.keys(plans[host][target])) {
+				newBatches[target] = (newBatches[target] || 0) + plans[host][target][batch].batchCount;
+			}
+		}
+	}
+	return newBatches;
+}
+
 export async function sendBatches(ns) {
+	const singleHost = false;
 	const delay = 100;
 	ns.disableLog("ALL");
 	let attackers = {};
 	let plans = {};
+	let batchCounts = {};
+	ns.tail();
 
 	let batch = 0;
+	let hostIndex = 0;
+	const messages = [];
 	while (true) {
 		const hosts = findHosts(ns);
 		const targets = findTargets(ns);
-		let hostIndex = 0;
+		if (hosts.length == 0 || targets.length == 0) {
+			ns.print("${hosts.length} hosts, ${targets.length} targets");
+			await sleep(1);
+			continue;
+		}
 		for (let target of targets) {
 			plans = clearFinished(ns, plans);
 			attackers = updateAttackers(plans);
+			batchCounts = updateBatchCounts(plans);
+			batchCounts[target] = batchCounts[target] || 0;
+				
+			if (hostIndex >= hosts.length) {
+				hostIndex = 0;
+			}
+
 			const host = hosts[hostIndex];
-			if (attackers[target] && attackers[target] != host) {
+			if (singleHost && attackers[target] && attackers[target] != host) {
 				continue;
 			}
 			plans[host] = plans[host] || {};
 			plans[host][target] = plans[host][target] || {};
+			if (!host) {
+				ns.print(hostIndex);
+				ns.print(hosts);
+			}
 			const batchPlan = await deployBatchPlan(ns, host, target, { delay });
-			if (batchPlan.batchCount > 0 &&
-				(attackers[target] == host || hasEnoughMemory(ns, host, plans[host], batchPlan))) {
-				ns.print(`Deploying ${host} to hack ${target}, eta: ${batchPlan.timing.etaString}`);
+
+			if (batchCounts[target] >= batchPlan.maxBatchCount) {
+				continue;
+			}
+
+			if (batchPlan.batchCount > 0 && hasEnoughMemory(ns, host, plans[host], batchPlan)) {
+				batchCounts[target] += batchPlan.batchCount;
+				const batchString = `(${batchPlan.batchCount}/${batchCounts[target]}/${batchPlan.maxBatchCount})`;
+				messages.push(`Deploying ${host} to hack ${target} ${batchString}, eta: ${batchPlan.timing.etaString}`);
 				ns.exec(batchPlan.options.files.manager, host, 1, host, target, batch);
 				attackers[target] = host;
 				plans[host][target][batch] = batchPlan;
 			} else {
 				hostIndex++;
 			}
-			if (hostIndex >= hosts.length) {
-				break;
-			}
+			ns.clearLog();
+			ns.print(buildMonitorTable(ns, plans));
+			await (ns.sleep(1));
 		}
-		await ns.sleep(1);
 		batch++;
 	}
 }

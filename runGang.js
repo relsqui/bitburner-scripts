@@ -175,6 +175,7 @@ function setTasks(ns, priority, taskTable) {
 		let tasks = bestTaskFor(ns, stats, gang, taskTable, priority);
 		let task = "Train Combat";
 		if (tasks.length > 0) {
+			// this is weirdly named; the penalty is 1 minus this number
 			if (gang.wantedPenalty < 0.99) {
 				tasks = tasks.filter((task) => 0 > wantedGainSoFar + ns.formulas.gang.wantedLevelGain(gang, stats, taskTable[task]));
 			}

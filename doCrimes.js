@@ -26,7 +26,7 @@ function getCrimeValues(ns, priority) {
             relevantKeys = Object.keys(crimeStats).filter((k) => k.startsWith(priority));
         }
         const relevantValues = relevantKeys.map((k) => crimeStats[k]);
-        crimeValues[crime] = relevantValues.reduce((a, b) => a + b) / crimeStats.time;
+        crimeValues[crime] = relevantValues.reduce((a, b) => a + b, 0) / crimeStats.time;
     }
     return crimeValues;
 }

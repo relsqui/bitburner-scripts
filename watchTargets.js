@@ -3,9 +3,9 @@
 import { makeTable } from './table.js';
 import { hosts_by_distance } from './breadth-first.js';
 
-const memBlocks = 6;
-const moneyBlocks = 6;
-const secBlocks = 6;
+const memBlocks = 8;
+const moneyBlocks = 8;
+const secBlocks = 8;
 const freeChar = ".";
 const usedChar = "#";
 
@@ -74,10 +74,11 @@ export async function main(ns) {
     while (true) {
         ns.clearLog();
         const targets = hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
+            .filter(ns.hasRootAccess)
             .filter((t) => ns.getServerMaxMoney(t) > 0)
             .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
             .slice(0, 20);
-        const labels = ["Target", "Max $", "Cur$", "CurSec"]; //, "Host", "Mem", "ETA"];
+        const labels = ["Target", "Max $", "Cur $", "Cur Sec"]; //, "Host", "Mem", "ETA"];
         const data = [];
         for (let target of targets) {
             const [maxMoney, money, security] = getTargetStats(ns, target);

@@ -91,13 +91,12 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 		// TODO: predict useful weaken amount when that's all we're doing
 		maxUsefulWeaken = maxPossibleSize;
 	}
-	// TODO: pretty sure this is buggy
 	const maxUsefulSize = Math.max(maxUsefulHack, maxUsefulGrow, maxUsefulWeaken);
 	const batchSize = Math.min(maxPossibleSize, maxUsefulSize);
 	const maxPossibleBatches = Math.floor(freeRam / (minimumRam * batchSize));
 	const batchCount = Math.min(maxBatchCount, maxPossibleBatches);
 	const sizeDetails = { maxPossibleSize, maxUsefulHack, maxUsefulGrow, maxUsefulSize };
-	const ram = { minimumRam, ramPerBatch: minimumRam * maxBatchCount, freeRam };
+	const ram = { minimumRam, ramPerBatch: minimumRam * batchSize, freeRam };
 	return [batchSize, sizeDetails, batchCount, ram];
 }
 
@@ -157,6 +156,6 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 
 export async function main(ns) {
 	const [host, target] = ns.args;
-	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: true });
-	// ns.tprint(JSON.stringify(batchPlan, null, 2));
+	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: false });
+	ns.tprint(JSON.stringify(batchPlan, null, 2));
 }

@@ -24,8 +24,7 @@ function ramString(ns) {
 }
 
 export async function main(ns) {
-	ns.disableLog("sleep");
-	ns.disableLog("getServerMoneyAvailable");
+	ns.disableLog("ALL");
 	ram = defaultRam;
 	nameScheme = defaultName;
 	const loop = (ns.args[0] == "loop");
@@ -34,6 +33,8 @@ export async function main(ns) {
 		let newServer = await buyServer(ns);
 		if (newServer) {
 			ns.toast("Bought " + newServer + " with " + ramString(ns), "info");
+			ns.print("Bought " + newServer + " with " + ramString(ns), "info");
+
 			purchasedServers = ns.getPurchasedServers();
 			await ns.sleep(1);
 		} else {
@@ -67,10 +68,12 @@ export async function main(ns) {
 		}
 		ram *= 2;
 		if (ram > ns.getPurchasedServerMaxRam()) {
+			ns.print("Maximum server size reached. Have a nice day!");
 			ns.tprint("Maximum server size reached. Have a nice day!");
 			break;
 		} else {
-			ns.print(`Raising server size to ${ramString(ns)}`);
+			const cost = ns.nFormat(ns.getPurchasedServerCost(ram), "$0.00a");
+			ns.print(`Raising server size to ${ramString(ns)} (${cost})`);
 			await ns.sleep(1);
 		}
 	}
