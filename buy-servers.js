@@ -32,8 +32,8 @@ export async function main(ns) {
 	while (purchasedServers.length < ns.getPurchasedServerLimit()) {
 		let newServer = await buyServer(ns);
 		if (newServer) {
-			ns.toast("Bought " + newServer + " with " + ramString(ns), "info");
-			ns.print("Bought " + newServer + " with " + ramString(ns), "info");
+			ns.toast("Bought " + newServer + " with " + ramString(ns));
+			ns.print("Bought " + newServer + " with " + ramString(ns));
 
 			purchasedServers = ns.getPurchasedServers();
 			await ns.sleep(1);

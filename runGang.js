@@ -1,10 +1,10 @@
 /** @param {NS} ns **/
 
-const enemyRates = [];
+const enemyRates = {};
 let ourLastChange = 0;
 
-function averageEnemyRate() {
-	return enemyRates.reduce((a, b) => a + b) / enemyRates.length;
+function averageEnemyRate(enemy) {
+	return enemyRates[enemy].reduce((a, b) => a + b) / enemyRates[enemy].length;
 }
 
 async function waitForTick(ns, infoFn) {
@@ -71,11 +71,12 @@ async function assignTasksForTick(ns, enemy, getEnemy, gangMembers, enableTerrit
 	const newEnemyPower = getEnemy().power;
 	const ourChange = newPower - oldPower;
 	const theirChange = newEnemyPower - oldEnemyPower;
-	enemyRates.push(theirChange);
-	const enemyAverage = averageEnemyRate();
+	enemyRates[enemy] = enemyRates[enemy] || [];
+	enemyRates[enemy].push(theirChange);
+	const enemyAverage = averageEnemyRate(enemy);
 	ns.print(`We gained ${ourChange} power that tick.`);
 	ns.print(`${enemy} gained ${theirChange} power.`);
-	ns.print(`(They gain ${enemyAverage} per tick on average, with ${enemyRates.length} samples).`);
+	ns.print(`(They gain ${enemyAverage} per tick on average, with ${enemyRates[enemy].length} samples).`);
 
 	if (newPower < newEnemyPower) {
 		// figure out when that will change.
@@ -109,7 +110,8 @@ function getBiggestEnemy(ns) {
 			enemyPower = enemies[e].power;
 		}
 	}
-	return [biggestEnemy, enemyPower];
+	const enemyInfoFn = () => ns.gang.getOtherGangInformation()[biggestEnemy];
+	return [biggestEnemy, enemyPower, enemyInfoFn];
 }
 
 function equipmentByCombatValue(ns) {
@@ -204,9 +206,8 @@ export async function main(ns) {
 	const buying = true;
 	const enableTerritory = true;
 	const tickSpacing = 17500;
-	const [biggestEnemy, enemyPower] = getBiggestEnemy(ns);
+	let [biggestEnemy, enemyPower, enemyInfoFn] = getBiggestEnemy(ns);
 	ns.print(`Biggest enemy is ${biggestEnemy} with ${enemyPower} power.`);
-	const enemyInfoFn = () => ns.gang.getOtherGangInformation()[biggestEnemy];
 	const equipment = equipmentByCombatValue(ns);
 	ns.print("Waiting for first tick ...");
 	await waitForTick(ns, enemyInfoFn);
@@ -224,6 +225,8 @@ export async function main(ns) {
 		gangMembers.sort((a, b) => averageCombatMult(ns, b) - averageCombatMult(ns, a));
 		const priority = ns.args[0] || choosePriority(ns);
 		ns.print(`Prioritizing ${priority}`);
+		[biggestEnemy, enemyPower, enemyInfoFn] = getBiggestEnemy(ns);
+		ns.print(`Biggest enemy is ${biggestEnemy} with ${enemyPower} power.`);
 		if (buildPower) {
 			await assignTasksForTick(ns, biggestEnemy, enemyInfoFn, gangMembers, enableTerritory);
 		}

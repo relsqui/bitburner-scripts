@@ -22,7 +22,8 @@ function horizontalRule(ns, widths, hrChar, hrJoiner) {
     return hrChar + cells.join(hrJoiner) + hrChar;
 }
 
-export function makeTable(ns, data, labels = [], settings = {}) {
+const widthMemory = {};
+export function makeTable(ns, data, labels = [], settings = {}, id = null) {
     const { joiner, hrChar, hrJoiner } = { ...defaultSettings, ...settings };
     const lines = [];
     const widths = [];
@@ -31,6 +32,14 @@ export function makeTable(ns, data, labels = [], settings = {}) {
             data[row][col] = data[row][col].toString();
             widths[col] = Math.max(widths[col] || 0, (labels[col] || "").length, data[row][col].length);
         }
+    }
+    if (id) {
+        if (widthMemory[id]) {
+            for (let i = 0; i < widths.length; i++) {
+                widths[i] = Math.max(widths[i], widthMemory[id][i]);
+            }
+        }
+        widthMemory[id] = widths.slice();
     }
     if (labels) {
         lines.push(rectifyRow(ns, labels, widths, joiner));

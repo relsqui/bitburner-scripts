@@ -81,7 +81,7 @@ export async function main(ns) {
                 } else {
                     assignTask(ns, i, "setToCommitCrime", "Homicide");
                 }
-            } else if (ns.getPlayer().hacking < 2500) {
+            } else if (ns.getPlayer().hacking < 100) {
                 let course = "Study Computer Science";
                 if (ns.getServerMoneyAvailable("home") > 100000000) {
                     ns.sleeve.travel(i, "Volhaven");
@@ -92,8 +92,16 @@ export async function main(ns) {
                 } else {
                     ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
                 }
-            } else if (ns.sleeve.getTask(i).task == "Idle") {
-                assignTask(ns, i, "setToCommitCrime", "Heist");
+            } else if (s.shock > 0) {
+                ns.sleeve.setToShockRecovery(i);
+            } else {
+                if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
+                    assignTask(ns, i, "setToCommitCrime", "Mug");
+                } else if (s.agility < 200 || s.defense < 200 || s.dexterity < 200 || s.strength < 200) {
+                    assignTask(ns, i, "setToCommitCrime", "Homicide");
+                } else {
+                    assignTask(ns, i, "setToCommitCrime", "Heist");
+                }
             }
             rows.push(formatStats(ns, i));
         }
