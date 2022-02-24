@@ -41,4 +41,5 @@ export async function main(ns) {
 	ns.print(rawPlan);
 	const batchPlan = JSON.parse(rawPlan);
 	await batchCycle(ns, batch, batchPlan);
+	ns.rm(planFile);
 }

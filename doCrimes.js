@@ -58,7 +58,7 @@ export async function main(ns) {
         if (priority == "karma" && ns.gang.createGang("Slum Snakes")) {
             ns.run("runGang.js");
             ns.run("watchGang.js");
-            ns.workForFaction("NiteSec", "Hacking Contracts", true);
+            // ns.workForFaction("Sector-12", "Hacking Contracts", true);
             break;
         }
     }

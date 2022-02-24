@@ -8,9 +8,9 @@ function upgradedMoneyGainRate(ns, { MaxCores, MaxLevel, MaxRam }) {
 function upgradedNodeCost(ns) {
     // TODO: calculate these
     return ns.hacknet.getPurchaseNodeCost() + 
-        10703000 + // max levels
-        2131000 + // max ram
-        146929000; // max cores
+        18416000 + // max levels
+        3667000 + // max ram
+        252817000; // max cores
 }
 
 function canBuyAnotherNode(ns) {
@@ -34,6 +34,7 @@ export async function main(ns) {
         ns.hacknet.upgradeRam(index, hnConstants.MaxRam);
         await ns.sleep(1);
     }
-    // ns.tprint(`Next node won't pay off ${fmtMoney(ns, upgradedNodeCost(ns))} in ${timelineHours} hours.`);
-    // ns.tprint(`(Expected production: ${fmtMoney(ns, upgradedMoneyGainRate(ns, hnConstants))}/s)`);
+    const expectedRate = upgradedMoneyGainRate(ns, hnConstants) * 3600;
+    ns.tprint(`Next node won't pay off ${fmtMoney(ns, upgradedNodeCost(ns))} in ${timelineHours} hours.`);
+    ns.tprint(`(Expected production: ${fmtMoney(ns, expectedRate)}/h)`);
 }

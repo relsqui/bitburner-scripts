@@ -1,6 +1,27 @@
 /** @param {NS} ns **/
 
+import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
+
+/* TODO:
+from https://github.com/danielyxie/bitburner/blob/dev/src/Crime/Crime.ts
+  successRate(p: IPlayerOrSleeve): number {
+    let chance: number =
+      this.hacking_success_weight * p.hacking +
+      this.strength_success_weight * p.strength +
+      this.defense_success_weight * p.defense +
+      this.dexterity_success_weight * p.dexterity +
+      this.agility_success_weight * p.agility +
+      this.charisma_success_weight * p.charisma +
+      CONSTANTS.IntelligenceCrimeWeight * p.intelligence;
+    chance /= CONSTANTS.MaxSkillLevel;
+    chance /= this.difficulty;
+    chance *= p.crime_success_mult;
+    chance *= p.getIntelligenceBonus(1);
+
+    return Math.min(chance, 1);
+  }
+*/
 
 function formatTask(ns, i, t) {
     const task = t || ns.sleeve.getTask(i);
@@ -30,35 +51,12 @@ function formatStats(ns, i) {
     return formatted;
 }
 
-function makeTask(fn, args) {
-    let task, crime, gymStatType, factionWorkType;
-    switch (fn) {
-        case "setToCommitCrime":
-            task = "Crime";
-            crime = args[0];
-            break;
-        case "setToFactionWork":
-            task = "Faction";
-            factionWorkType = args[2];
-            break;
-        case "setToGymWorkout":
-            task = "Gym";
-            gymStatType = `Train ${args[2]}`;
-            break;
-        case "setToUniversityCourse":
-            task = "Class";
-            break;
-    }
-    return { task, crime, gymStatType, factionWorkType };
-}
-
-function assignTask(ns, i, fn, ...args) {
-    const task = makeTask(fn, args);
-    if (formatTask(ns, i) == formatTask(ns, i, task)) {
-        // this sleeve is already doing this task
+function assignCrime(ns, i, crime) {
+    const task = ns.sleeve.getTask(i);
+    if (task.crime == crime) {
         return;
     }
-    ns.sleeve[fn](i, ...args);
+    ns.sleeve.setToCommitCrime(i, crime);
 }
 
 export async function main(ns) {
@@ -71,19 +69,24 @@ export async function main(ns) {
         for (let i = 0; i < sleeveCount; i++) {
             // TODO: autobuy augments
             const s = ns.sleeve.getSleeveStats(i);
+            const p = ns.getPlayer();
             if (s.sync < 100) {
                 ns.sleeve.setToSynchronize(i);
             } else if (s.shock > 50) {
                 ns.sleeve.setToShockRecovery(i);
             } else if (!ns.gang.inGang()) {
                 if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
-                    assignTask(ns, i, "setToCommitCrime", "Mug");
+                    assignCrime(ns, i, "Mug");
                 } else {
-                    assignTask(ns, i, "setToCommitCrime", "Homicide");
+                    assignCrime(ns, i, "Homicide");
                 }
-            } else if (ns.getPlayer().hacking < 100) {
+            } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
+                ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
+            } else if (s.shock > 0) {
+                ns.sleeve.setToShockRecovery(i);
+            } else if (s.hacking < 200 || p.hacking < 200) {
                 let course = "Study Computer Science";
-                if (ns.getServerMoneyAvailable("home") > 100000000) {
+                if (getSettings(ns).sleeves.buying && ns.getServerMoneyAvailable("home") > 300000000) {
                     ns.sleeve.travel(i, "Volhaven");
                     course = "Algorithms";
                 }
@@ -92,16 +95,14 @@ export async function main(ns) {
                 } else {
                     ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
                 }
-            } else if (s.shock > 0) {
-                ns.sleeve.setToShockRecovery(i);
-            } else {
-                if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
-                    assignTask(ns, i, "setToCommitCrime", "Mug");
-                } else if (s.agility < 200 || s.defense < 200 || s.dexterity < 200 || s.strength < 200) {
-                    assignTask(ns, i, "setToCommitCrime", "Homicide");
-                } else {
-                    assignTask(ns, i, "setToCommitCrime", "Heist");
-                }
+            // } else {
+            //     if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
+            //         assignCrime(ns, i, "Mug");
+            //     } else if (s.agility < 400 || s.defense < 400 || s.dexterity < 400 || s.strength < 400) {
+            //         assignCrime(ns, i, "Homicide");
+            //     } else {
+            //         assignCrime(ns, i, "Heist");
+            //     }
             }
             rows.push(formatStats(ns, i));
         }

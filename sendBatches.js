@@ -17,17 +17,15 @@ function targetValue(ns, host) {
 }
 
 function findTargets(ns) {
-	const newTargets = [];
-	for (let host of hosts_by_distance(ns)) {
+	const myHack = ns.getHackingLevel();
+	const targets = hosts_by_distance(ns)
 		// TODO: don't hardcode the name scheme
-		if (host.startsWith("warthog") ||
-			ns.getServerMaxMoney(host) == 0) {
-			continue;
-		}
-		newTargets.push(host);
-	}
-	newTargets.sort((a, b) => targetValue(ns, b) - targetValue(ns, a));
-	return newTargets.filter(ns.hasRootAccess);
+		.filter((h) => !h.startsWith("warthog"))
+		.filter(ns.hasRootAccess)
+		.filter((h) => ns.getServerMaxMoney(h) > 0)
+		.filter((h) => myHack >= ns.getServerRequiredHackingLevel(h))
+		.sort((a, b) => targetValue(ns, b) - targetValue(ns, a));
+	return targets;
 }
 
 function hasMemory(ns, host) {
@@ -45,16 +43,13 @@ function findHosts(ns) {
 
 function hasEnoughMemory(ns, host, oldPlans, newPlan) {
 	let allottedRam = 0;
-	if (host == "home") {
-		allottedRam += newPlan.options.homeReservedRam;
-	}
 	for (let target of Object.keys(oldPlans)) {
 		allottedRam += Object.values(oldPlans[target]).map((plan) => plan.ram.ramPerBatch * plan.batchCount);
 	}
 	return allottedRam + newPlan.ram.ramPerBatch < ns.getServerMaxRam(host);
 }
 
-function clearFinished(ns, allPlans) {
+async function clearFinished(ns, allPlans) {
 	const newPlans = {};
 	for (let host of Object.keys(allPlans)) {
 		newPlans[host] = {};
@@ -106,21 +101,19 @@ export async function sendBatches(ns) {
 	let attackers = {};
 	let plans = {};
 	let batchCounts = {};
-	ns.tail();
 
 	let batch = 0;
 	let hostIndex = 0;
-	const messages = [];
+	let messages = new Array(5).fill("");
 	while (true) {
+		await ns.sleep(1);
 		const hosts = findHosts(ns);
 		const targets = findTargets(ns);
 		if (hosts.length == 0 || targets.length == 0) {
-			ns.print("${hosts.length} hosts, ${targets.length} targets");
-			await sleep(1);
 			continue;
 		}
 		for (let target of targets) {
-			plans = clearFinished(ns, plans);
+			plans = await clearFinished(ns, plans);
 			attackers = updateAttackers(plans);
 			batchCounts = updateBatchCounts(plans);
 			batchCounts[target] = batchCounts[target] || 0;
@@ -130,7 +123,10 @@ export async function sendBatches(ns) {
 			}
 
 			const host = hosts[hostIndex];
-			if (singleHost && attackers[target] && attackers[target] != host) {
+			if ((singleHost && attackers[target] && attackers[target] != host) ||
+				// we can't get the filename from a plan in this case
+				// because we don't know whether it exists
+				(ns.fileExists(`batchPlan_${host}_${target}.txt`, host))) {
 				continue;
 			}
 			plans[host] = plans[host] || {};
@@ -139,6 +135,7 @@ export async function sendBatches(ns) {
 				ns.print(hostIndex);
 				ns.print(hosts);
 			}
+
 			const batchPlan = await deployBatchPlan(ns, host, target, { delay });
 
 			if (batchCounts[target] >= batchPlan.maxBatchCount) {
@@ -153,11 +150,14 @@ export async function sendBatches(ns) {
 				attackers[target] = host;
 				plans[host][target][batch] = batchPlan;
 			} else {
+				// messages.push(`Can't deploy ${host} to hack ${target} with ${batchPlan.batchCount} batches`);
 				hostIndex++;
 			}
 			ns.clearLog();
 			ns.print(buildMonitorTable(ns, plans));
-			await (ns.sleep(1));
+			ns.print("---");
+			messages = messages.slice(messages.length-5);
+			ns.print(messages.join("\n"));
 		}
 		batch++;
 	}

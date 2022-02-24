@@ -21,7 +21,7 @@ export async function call(ns, endpoint, payload) {
 export async function main(ns) {
     const payload = {
         type: "Generate IP Addresses",
-        data: 2502948,
+        data: "2502948",
     }
     const response = await call(ns, "contract", payload);
     ns.tprint(JSON.stringify(response, null, 2));

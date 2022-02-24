@@ -9,16 +9,17 @@ export async function main(ns) {
 		ns.run("runGang.js");
 	}
 	ns.run("loop.js");
+	ns.run("sendBatches.js");
 	ns.universityCourse("Rothman University", "Study Computer Science", false);
 	while (!ns.getPlayer().tor && !ns.purchaseTor()) {
 		await ns.sleep(2000);
 	}
 	for (let file of ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"]) {
 		while (!ns.fileExists(file) && !ns.purchaseProgram(file)) {
-			await ns.sleep(2000);
+			await ns.sleep(5000);
 		}
 	}
-	await ns.sleep(5000);
+	ns.run("buy-servers.js", 1, "loop");
 	if (ns.getServerMoneyAvailable("home") < 100000000) {
 		// we're not on the grind yet, come back later
 		ns.exit();

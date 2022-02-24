@@ -15,7 +15,18 @@ function skipNote(hostname, note) {
 async function copy(hostname) {
 	let file = ns.args[1];
 	if (!await ns.scp(file, hostname)) {
-		tprint("Failed to copy ", file, " to ", hostname);
+		ns.tprint("Failed to copy ", file, " to ", hostname);
+	}
+}
+
+async function run(hostname) {
+	let file = ns.args[1];
+	if (ns.fileExists(file, hostname)) {
+		if (ns.exec(file, hostname) == 0) {
+			ns.tprint("Failed to run ", file, " on ", hostname);
+		}
+	} else {
+		ns.tprint(`${file} doesn't exist on ${hostname}`);
 	}
 }
 
@@ -31,22 +42,18 @@ async function own(hostname) {
 	if (ns.hasRootAccess(hostname)) {
 		return;
 	}
-	let myLevel = ns.getHackingLevel();
-	let levelRequired = ns.getServerRequiredHackingLevel(hostname);
-	if (myLevel < levelRequired) {
-		if (ns.args[1] == "verbose" && levelRequired < Math.max(myLevel + 100, myLevel * 1.5)) {
-			skipNote(hostname, `insufficient hack level: ${myLevel} < ${levelRequired}`);
-		}
-		return;
-	}
+	// let myLevel = ns.getHackingLevel();
+	// let levelRequired = ns.getServerRequiredHackingLevel(hostname);
+	// if (myLevel < levelRequired) {
+	// 	if (ns.args[1] == "verbose" && levelRequired < Math.max(myLevel + 100, myLevel * 1.5)) {
+	// 		skipNote(hostname, `insufficient hack level: ${myLevel} < ${levelRequired}`);
+	// 	}
+	// 	return;
+	// }
 	let portOpeners = Object.keys(allPortOpeners).filter(function (file) { return ns.fileExists(file) });
 	let availablePorts = portOpeners.length;
 	let portsRequired = ns.getServerNumPortsRequired(hostname);
 	if (portsRequired > availablePorts) {
-		if (hostname != "darkweb") {
-			// useful to know but darkweb gets spammy
-			// skipNote(hostname, "too many ports needed: " + portsRequired + " > " + availablePorts);
-		}
 		return;
 	}
 
@@ -56,9 +63,6 @@ async function own(hostname) {
 	}
 	await ns.nuke(hostname);
 	ns.toast(`Rooted ${hostname}.`);
-	if (["CSEC", "avmnite-02h", "I.I.I.I", "run4theh111z"].includes(hostname)) {
-		await backdoor(hostname);
-	}
 }
 
 async function backdoor(hostname) {
@@ -111,6 +115,7 @@ export async function main(netScript) {
 	ns = netScript;
 	let cues = {
 		copy,
+		run,
 		list,
 		own,
 		backdoor,

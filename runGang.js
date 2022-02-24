@@ -1,5 +1,7 @@
 /** @param {NS} ns **/
 
+import { getSettings } from './settings.js';
+
 const enemyRates = {};
 let ourLastChange = 0;
 
@@ -178,8 +180,8 @@ function setTasks(ns, priority, taskTable) {
 		let task = "Train Combat";
 		if (tasks.length > 0) {
 			// this is weirdly named; the penalty is 1 minus this number
-			if (gang.wantedPenalty < 0.99) {
-				tasks = tasks.filter((task) => 0 > wantedGainSoFar + ns.formulas.gang.wantedLevelGain(gang, stats, taskTable[task]));
+			if (gang.wantedPenalty < 0.95 && gang.wantedLevel > 100) {
+				tasks = tasks.filter((task) => -10 > wantedGainSoFar + ns.formulas.gang.wantedLevelGain(gang, stats, taskTable[task]));
 			}
 			if (tasks.length == 0) {
 				task = "Vigilante Justice";
@@ -194,8 +196,16 @@ function setTasks(ns, priority, taskTable) {
 }
 
 function choosePriority(ns) {
-	if (ns.getServerMoneyAvailable("home") < 1000000 ||
-		ns.getFactionRep(ns.gang.getGangInformation().faction) > 2500000) {
+	const prioritySetting = getSettings(ns).gang.priority;
+	if (prioritySetting) {
+		return prioritySetting;
+	}
+	const repTarget = getSettings(ns).gang.repTarget || 2500000;
+	const moneyTarget = getSettings(ns).gang.moneyTarget || 1000000;
+	const gang = ns.gang.getGangInformation();
+	if (ns.getServerMoneyAvailable("home") < moneyTarget ||
+		ns.getFactionRep(gang.faction) > repTarget || 
+		gang.territory == 1) {
 		return "money";
 	}
 	return "respect";
@@ -203,7 +213,6 @@ function choosePriority(ns) {
 
 export async function main(ns) {
 	ns.disableLog("ALL");
-	const buying = true;
 	const enableTerritory = true;
 	const tickSpacing = 17500;
 	let [biggestEnemy, enemyPower, enemyInfoFn] = getBiggestEnemy(ns);
@@ -213,6 +222,7 @@ export async function main(ns) {
 	await waitForTick(ns, enemyInfoFn);
 	const taskTable = getTaskTable(ns);
 	while (true) {
+		const buying = getSettings(ns).gang.buying;
 		const { power, territory } = ns.gang.getGangInformation();
 		const buildPower = territory < 1 || power < enemyInfoFn().power;
 		if (buildPower) {

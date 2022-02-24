@@ -1,6 +1,7 @@
 /** @param {NS} ns **/
 export async function main(ns) {
-    for (let file of ns.ls("home", "batchPlan_home_")) {
+    const host = ns.getHostname();
+    for (let file of ns.ls(host, `batchPlan_${host}`)) {
         ns.rm(file);
     }
 }

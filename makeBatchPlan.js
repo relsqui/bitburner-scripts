@@ -138,6 +138,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 	const batchPlan = makeBatchPlan(ns, host, target, options);
 	if (options.deploy) {
 		const planFile = `batchPlan_${host}_${target}.txt`;
+		batchPlan["planFile"] = planFile;
 		if (ns.fileExists(planFile, host)) {
 			// these files get read a lot, make sure it actually gets deleted
 			while (!ns.rm(planFile, host)) {

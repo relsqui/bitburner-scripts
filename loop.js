@@ -1,5 +1,29 @@
 /** @param {NS} ns **/
+
+import goto from "goto.js";
 import { hosts_by_distance } from "breadth-first.js";
+
+async function backdoor(ns, hostname) {
+	const prevServer = ns.getCurrentServer();
+	await goto(ns, hostname);
+	await ns.sleep(10);
+
+	await ns.installBackdoor(hostname);
+	ns.toast(`Backdoored ${hostname}`);
+	await goto(ns, prevServer);
+}
+
+async function checkBackdoors(ns) {
+	const servers = ["CSEC", "avmnite-02h", "I.I.I.I", "run4theh111z", "powerhouse-fitness"];
+	for (let server of servers) {
+		if (ns.getServer(server).backdoorInstalled ||
+			ns.getPlayer().hacking < ns.getServerRequiredHackingLevel(server) ||
+			!ns.hasRootAccess(server)) {
+			continue;
+		}
+		await backdoor(ns, server);
+	}
+}
 
 function joinAllFactions(ns) {
 	for (let faction of ns.checkFactionInvitations()) {
@@ -27,11 +51,13 @@ export async function main(ns) {
 			ns.print(`  ${server} (${hackLevel})`);
 		}
 		ns.print(`\n${missing.length} servers remaining.`);
+		await checkBackdoors(ns);
 		joinAllFactions(ns);
 		await ns.sleep(1000);
 	}
 	ns.tprint("All servers owned.");
 	while (true) {
+		await checkBackdoors(ns);
 		joinAllFactions(ns);
 		await ns.sleep(1000);
 	}
