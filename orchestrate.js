@@ -20,9 +20,11 @@ async function copy(hostname) {
 }
 
 async function run(hostname) {
-	let file = ns.args[1];
+	const file = ns.args[1];
+	const mem = ns.getScriptRam(file, hostname);
+	const ram = ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname);
 	if (ns.fileExists(file, hostname)) {
-		if (ns.exec(file, hostname) == 0) {
+		if (ram > mem && ns.exec(file, hostname) == 0) {
 			ns.tprint("Failed to run ", file, " on ", hostname);
 		}
 	} else {

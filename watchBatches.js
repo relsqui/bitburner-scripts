@@ -45,15 +45,15 @@ function flipPlanTable(plansByHost) {
     return plansByTarget;
 }
 
-export function buildMonitorTable(ns, plansByHost) {
+export function buildMonitorTable(ns, plansByHost, targets) {
     const plansByTarget = flipPlanTable(plansByHost);
     const myHack = ns.getHackingLevel();
-    const targets = hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
-        .filter(ns.hasRootAccess)
-        .filter((t) => myHack >= ns.getServerRequiredHackingLevel(t))
-        .filter((t) => ns.getServerMaxMoney(t) > 0)
-        .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
-        .slice(0, 20);
+    // const targets = hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
+    //     .filter(ns.hasRootAccess)
+    //     .filter((t) => myHack >= ns.getServerRequiredHackingLevel(t))
+    //     .filter((t) => ns.getServerMaxMoney(t) > 0)
+    //     .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
+    //     .slice(0, 20);
     const labels = ["Target", "Max $", "Curr $", "Curr Sec", "W", "G", "H", "Hosts"]; //, "Host", "Mem", "ETA"];
     const data = [];
     for (let target of targets) {

@@ -41,5 +41,7 @@ export async function main(ns) {
 	ns.print(rawPlan);
 	const batchPlan = JSON.parse(rawPlan);
 	await batchCycle(ns, batch, batchPlan);
-	ns.rm(planFile);
+	if (ns.rm(planFile, host) == 0) {
+		ns.tprint(`Can't remove ${planFile} on ${host}`)
+	}
 }

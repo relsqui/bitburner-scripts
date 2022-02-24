@@ -100,10 +100,15 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 	return [batchSize, sizeDetails, batchCount, ram];
 }
 
+export function getMaxBatches(ns, target) {
+	const timing = getTiming(ns, target, options.delay);
+	return Math.floor(timing.eta / timing.betweenBatches);
+}
+
 export function makeBatchPlan(ns, host, target, options) {
 	const threadRatio = getThreadRatio(ns, host, target);
 	const timing = getTiming(ns, target, options.delay);
-	const maxBatchCount = Math.floor(timing.eta / timing.betweenBatches);
+	const maxBatchCount = Math.floor(timing.eta / timing.betweenBatches) - options.priorBatches;
 	let [batchSize, sizeDetails, batchCount, ram] =
 		getBatchSize(ns, host, target, options, threadRatio, maxBatchCount);
 	const threads = {
@@ -126,6 +131,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 		delay: 500,
 		homeReservedRam: 100,
 		deploy: true,
+		priorBatches: 0,
 		...opts,
 		files: {
 			manager: "manageBatches.js",
