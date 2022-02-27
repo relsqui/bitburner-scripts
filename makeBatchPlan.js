@@ -4,6 +4,9 @@ function getThreadRatio(ns, host, target) {
 	const atMinSec = ns.getServerSecurityLevel(target) == ns.getServerMinSecurityLevel(target);
 	const atMaxMoney = ns.getServerMoneyAvailable(target) == ns.getServerMaxMoney(target);
 
+	// TODO: if we can weaken enough to mitigate
+	// grow and hack, hack even if not ready yet
+
 	let hackThreads = 0;
 	let hackRate = 0;
 	let hackSecChange = 0;
@@ -62,7 +65,7 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 		(threadRatio.grow * ns.getScriptRam(options.files.grow, host)) +
 		ns.getScriptRam(options.files.manager, host) +
 		((threadRatio.mitigateHack + threadRatio.mitigateGrow) * ns.getScriptRam(options.files.weaken, host));
-	let freeRam = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
+	let freeRam = options.availableRam;
 	if (host == "home") {
 		// leave some breathing room
 		freeRam = Math.max(0, freeRam - options.homeReservedRam);
@@ -100,8 +103,8 @@ function getBatchSize(ns, host, target, options, threadRatio, maxBatchCount) {
 	return [batchSize, sizeDetails, batchCount, ram];
 }
 
-export function getMaxBatches(ns, target) {
-	const timing = getTiming(ns, target, options.delay);
+export function getMaxBatches(ns, target, delay) {
+	const timing = getTiming(ns, target, delay);
 	return Math.floor(timing.eta / timing.betweenBatches);
 }
 
@@ -132,6 +135,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 		homeReservedRam: 100,
 		deploy: true,
 		priorBatches: 0,
+		availableRam: ns.getServerMaxRam(host) - ns.getServerUsedRam(host),
 		...opts,
 		files: {
 			manager: "manageBatches.js",
@@ -163,6 +167,6 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 
 export async function main(ns) {
 	const [host, target] = ns.args;
-	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: false });
+	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: true });
 	ns.tprint(JSON.stringify(batchPlan, null, 2));
 }

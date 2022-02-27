@@ -8,6 +8,9 @@ export async function main(ns) {
 	if (ns.gang.inGang()) {
 		ns.run("runGang.js");
 	}
+	if (ns.getPlayer().hasCorporation) {
+		ns.run("runCorp.js");
+	}
 	ns.run("loop.js");
 	ns.run("sendBatches.js");
 	ns.universityCourse("Rothman University", "Study Computer Science", false);
@@ -27,11 +30,7 @@ export async function main(ns) {
 	if (ns.getPlayer().hacking < 2500 && ns.getServerMoneyAvailable("home") > 200000 && ns.travelToCity("Volhaven")) {
 		ns.universityCourse("ZB Institute of Technology", "Algorithms", false);
 	}
-	// ns.run("buy-servers.js");
-	// give that a sec to suck up all the money
-	// await ns.sleep(5000);
-	// ns.run("sendBatches.js");
-	while (ns.getPlayer().hacking < 2500) {
+	while (ns.getPlayer().hacking < 2500 || ns.getServerMoneyAvailable("home") < 100000000000) {
 		await ns.sleep(1000);
 	}
 	ns.tprint(`Time to flight: ${ns.nFormat((Date.now()-start)/1000, "00:00:00")}.`);
@@ -40,8 +39,14 @@ export async function main(ns) {
 		await ns.sleep(5000);
 	}
 	ns.joinFaction("Daedalus");
-	if (ns.getFactionFavor("Daedalus") < 150) {
+	if (ns.getFactionFavor("Daedalus") < 150 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
 		ns.run("waitForFavor.js");
+		ns.kill("sendBatches.js");
+		ns.run("orchestrate.js", 1, "stop");
+		ns.run("warthogs.js", 1, "stop");
+		ns.run("orchestrate.js", 1, "share");
+		ns.run("warthogs.js", 1, "share");
+		ns.run("share-it.js", 1, "home");
 	}
 	ns.toast("LFGGGGGGGGGGGG", "success", 5000);
 }

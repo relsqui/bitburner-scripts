@@ -59,6 +59,55 @@ function assignCrime(ns, i, crime) {
     ns.sleeve.setToCommitCrime(i, crime);
 }
 
+function hasCrimeBuffs(aug) {
+    const priorities = ["crime_success_mult", "crime_money_mult"];
+    for (let skill of ["agility", "dexterity", "defense", "strength"]) {
+        priorities.push(skill + "_mult", skill + "_exp_mult");
+    }
+    for (let key of priorities) {
+        if (aug[key] && aug[key] > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function hasHackBuffs(aug) {
+    const keys = Object.keys(aug).filter((k) => k.startsWith("hacking"));
+    for (let key of keys) {
+        if (aug[key] && aug[key] > 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function buyAnAugment(ns, i) {
+    const augPairs = ns.sleeve.getSleevePurchasableAugs(i);
+    let augments = [];
+    for (let {cost, name} of augPairs) {
+        augments.push({
+            name,
+            cost,
+            ...ns.getAugmentationStats(name)
+        })
+    }
+    const maxSpend = getSettings(ns).sleeves.maxSpend || ns.getServerMoneyAvailable("home");
+    augments = augments.filter((a) => a.cost < maxSpend);
+    let augsToGet = augments.filter(hasCrimeBuffs);
+    if (augsToGet.length == 0) {
+        augsToGet = augments.filter(hasHackBuffs);
+    }
+    if (augsToGet.length == 0) {
+        augsToGet = augments;
+    }
+    augsToGet.sort((a, b) => a.cost - b.cost);
+    if (augsToGet.length > 0 && ns.getServerMoneyAvailable("home") > augsToGet[0].cost) {
+        ns.sleeve.purchaseSleeveAug(i, augsToGet[0].name);
+        ns.toast(`Bought ${augsToGet[0].name} for sleeve ${i}.`);
+    }
+}
+
 export async function main(ns) {
     ns.disableLog("ALL");
     const labels = ["#", "Shock", "Sync", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task"];
@@ -67,7 +116,9 @@ export async function main(ns) {
         const sleeveCount = ns.sleeve.getNumSleeves();
         const rows = [];
         for (let i = 0; i < sleeveCount; i++) {
-            // TODO: autobuy augments
+            if (getSettings(ns).sleeves.buying) {
+                buyAnAugment(ns, i);
+            }
             const s = ns.sleeve.getSleeveStats(i);
             const p = ns.getPlayer();
             if (s.sync < 100) {
@@ -82,9 +133,9 @@ export async function main(ns) {
                 }
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
-            } else if (s.shock > 0) {
-                ns.sleeve.setToShockRecovery(i);
-            } else if (s.hacking < 200 || p.hacking < 200) {
+            // } else if (s.shock > 0) {
+            //     ns.sleeve.setToShockRecovery(i);
+            } else if (s.hacking < 100 || p.hacking < 200) {
                 let course = "Study Computer Science";
                 if (getSettings(ns).sleeves.buying && ns.getServerMoneyAvailable("home") > 300000000) {
                     ns.sleeve.travel(i, "Volhaven");
@@ -95,14 +146,14 @@ export async function main(ns) {
                 } else {
                     ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
                 }
-            // } else {
-            //     if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
-            //         assignCrime(ns, i, "Mug");
-            //     } else if (s.agility < 400 || s.defense < 400 || s.dexterity < 400 || s.strength < 400) {
-            //         assignCrime(ns, i, "Homicide");
-            //     } else {
-            //         assignCrime(ns, i, "Heist");
-            //     }
+            } else {
+                if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
+                    assignCrime(ns, i, "Mug");
+                } else if (s.agility < 400 || s.defense < 400 || s.dexterity < 400 || s.strength < 400) {
+                    assignCrime(ns, i, "Homicide");
+                } else {
+                    assignCrime(ns, i, "Heist");
+                }
             }
             rows.push(formatStats(ns, i));
         }

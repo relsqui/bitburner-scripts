@@ -1,0 +1,16 @@
+{
+    "gang": {
+        "priority": null,
+        "buying": false,
+        "repTarget": 1800000,
+        "moneyTarget": null
+    },
+    "servers": {
+        "buying": false,
+        "maxSpend": null
+    },
+    "sleeves": {
+        "buying": true,
+        "maxSpend": 100000000000
+    }
+}

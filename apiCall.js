@@ -20,8 +20,8 @@ export async function call(ns, endpoint, payload) {
 
 export async function main(ns) {
     const payload = {
-        type: "Generate IP Addresses",
-        data: "2502948",
+        type: "Find All Valid Math Expressions",
+        data: [864209019534, -47],
     }
     const response = await call(ns, "contract", payload);
     ns.tprint(JSON.stringify(response, null, 2));

@@ -64,7 +64,7 @@ async function own(hostname) {
 		allPortOpeners[opener](hostname);
 	}
 	await ns.nuke(hostname);
-	ns.toast(`Rooted ${hostname}.`);
+	ns.toast(`Rooted ${hostname}.`, "success", 500);
 }
 
 async function backdoor(hostname) {

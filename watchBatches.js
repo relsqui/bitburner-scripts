@@ -30,7 +30,9 @@ function getTargetStats(ns, target, plans) {
 function getHosts(plans) {
     const hosts = [];
     for (let plan of Object.values(plans)) {
-        hosts.push(plan.host)
+        if (!hosts.includes(plan.host)) {
+            hosts.push(plan.host)
+        }
     }
     return hosts;
 }
@@ -45,16 +47,28 @@ function flipPlanTable(plansByHost) {
     return plansByTarget;
 }
 
-export function buildMonitorTable(ns, plansByHost, targets) {
+function getNextETA(ns, plansByHost) {
+    const plans = Object.values(plansByHost);
+    if (plans.length == 0) {
+        return "";
+    }
+    function timeToFinish(plan) {
+        return Math.round((plan.timing.started + plan.timing.eta - Date.now())/1000);
+    }
+    plans.sort((a, b) => timeToFinish(a) - timeToFinish(b));
+    return timeToFinish(plans[0]);
+}
+
+export function buildMonitorTable(ns, plansByHost, targets = null) {
     const plansByTarget = flipPlanTable(plansByHost);
     const myHack = ns.getHackingLevel();
-    // const targets = hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
-    //     .filter(ns.hasRootAccess)
-    //     .filter((t) => myHack >= ns.getServerRequiredHackingLevel(t))
-    //     .filter((t) => ns.getServerMaxMoney(t) > 0)
-    //     .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
-    //     .slice(0, 20);
-    const labels = ["Target", "Max $", "Curr $", "Curr Sec", "W", "G", "H", "Hosts"]; //, "Host", "Mem", "ETA"];
+    targets = targets || hosts_by_distance(ns).filter((h) => !h.startsWith("warthog"))
+        .filter(ns.hasRootAccess)
+        .filter((t) => myHack >= ns.getServerRequiredHackingLevel(t))
+        .filter((t) => ns.getServerMaxMoney(t) > 0)
+        .sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a))
+        .slice(0, 20);
+    const labels = ["Target", "Max $", "Curr $", "Curr Sec", "W", "G", "H", "Hosts", "ETA"];
     const data = [];
     for (let target of targets) {
         const plans = plansByTarget[target] || {};
@@ -67,7 +81,7 @@ export function buildMonitorTable(ns, plansByHost, targets) {
                 hostString += ` (+${hosts.length-1})`;
             }
         }
-        data.push([target, ...targetStats, hostString]);
+        data.push([target, ...targetStats, hostString, getNextETA(ns, plans)]);
     }
     const table = makeTable(ns, data, labels, null, "batch status");
     return table;

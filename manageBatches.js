@@ -15,17 +15,17 @@ async function batchCycle(ns, batch, { host, target, threads, timing, options })
 	// 	`ETA ${timing.etaString}.`, "info", 4000);
 	// we're wasting some time on sometimes unnecessary sleeps here
 	// for the sake of making the timing as consistent as possible
-	if (threads.mitigateHack) {
+	if (threads.mitigateHack > 0) {
 		ns.run(options.files.weaken, threads.mitigateHack, target, "mitigateHack", batch);
 	}
 	await ns.sleep(timing.beforeWeaken);
-	const lastPid = ns.run(options.files.weaken, threads.mitigateGrow, target, "mitigateGrow", batch);
+	ns.run(options.files.weaken, threads.mitigateGrow, target, "mitigateGrow", batch);
 	await ns.sleep(timing.beforeGrow);
-	if (threads.grow) {
+	if (threads.grow > 0) {
 		ns.run(options.files.grow, threads.grow, target, batch);
 	}
 	await ns.sleep(timing.beforeHack);
-	if (threads.hack) {
+	if (threads.hack > 0) {
 		ns.run(options.files.hack, threads.hack, target, batch);
 	}
 	await ns.sleep(timing.betweenBatches);
@@ -37,11 +37,11 @@ export async function main(ns) {
 	ns.print(`Managing batches from ${host} to ${target}`);
 	const planFile = `batchPlan_${host}_${target}.txt`;
 	const rawPlan = ns.read(planFile);
+	if (ns.rm(planFile, host) == 0) {
+		// ns.tprint(`Can't remove ${planFile} on ${host}`)
+	}
 	ns.print("Starting this plan:");
 	ns.print(rawPlan);
 	const batchPlan = JSON.parse(rawPlan);
 	await batchCycle(ns, batch, batchPlan);
-	if (ns.rm(planFile, host) == 0) {
-		ns.tprint(`Can't remove ${planFile} on ${host}`)
-	}
 }

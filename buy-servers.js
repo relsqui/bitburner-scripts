@@ -37,6 +37,9 @@ export async function main(ns) {
 	const loop = (ns.args[0] == "loop");
 	let purchasedServers = ns.getPurchasedServers();
 	while (purchasedServers.length < ns.getPurchasedServerLimit()) {
+		while (!getSettings(ns).servers.buying) {
+			await ns.sleep(1000);
+		}
 		let newServer = await buyServer(ns);
 		if (newServer) {
 			ns.toast("Bought " + newServer + " with " + ramString(ns));
@@ -71,7 +74,7 @@ export async function main(ns) {
 				// 	await ns.sleep(1000);
 				// }
 				ns.print(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`);
-				ns.toast(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`);
+				ns.toast(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`, "info", 500);
 				ns.killall(server);
 				ns.deleteServer(server);
 				purchasedServers[i] = await buyServer(ns);

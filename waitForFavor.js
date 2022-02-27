@@ -14,6 +14,7 @@ export async function main(ns) {
         favorGain = ns.getFactionFavorGain(faction);
         ns.clearLog();
         ns.print(`(${fmt(favorSoFar)} + ${fmt(favorGain)}) / ${neededFavor} favor`);
+        ns.print("Share power: " + ns.getSharePower().toString().slice(0, 12));
         await ns.sleep(5000);
     } while (favorSoFar + favorGain < neededFavor);
     ns.toast("Time to install!", "success");
