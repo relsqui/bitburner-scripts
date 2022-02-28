@@ -1,16 +1,20 @@
 {
+    "batches": {
+        "homeReservedRam": 100,
+        "delay": 100
+    },
     "gang": {
         "priority": null,
-        "buying": false,
+        "buying": true,
         "repTarget": 1800000,
         "moneyTarget": null
     },
     "servers": {
-        "buying": false,
+        "buying": true,
         "maxSpend": null
     },
     "sleeves": {
         "buying": true,
-        "maxSpend": 100000000000
+        "maxSpend": null
     }
 }

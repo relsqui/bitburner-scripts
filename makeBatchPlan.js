@@ -1,4 +1,6 @@
 /** @param {NS} ns **/
+import { getSettings } from './settings.js';
+
 function getThreadRatio(ns, host, target) {
 	const cores = ns.getServer(host).cpuCores;
 	const atMinSec = ns.getServerSecurityLevel(target) == ns.getServerMinSecurityLevel(target);
@@ -136,6 +138,7 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 		deploy: true,
 		priorBatches: 0,
 		availableRam: ns.getServerMaxRam(host) - ns.getServerUsedRam(host),
+		...getSettings(ns).batches,
 		...opts,
 		files: {
 			manager: "manageBatches.js",

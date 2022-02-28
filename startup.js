@@ -30,6 +30,10 @@ export async function main(ns) {
 	if (ns.getPlayer().hacking < 2500 && ns.getServerMoneyAvailable("home") > 200000 && ns.travelToCity("Volhaven")) {
 		ns.universityCourse("ZB Institute of Technology", "Algorithms", false);
 	}
+	if (ns.getOwnedAugmentations(true).includes("The Red Pill")) {
+		// just waiting on hack xp
+		ns.exit();
+	}
 	while (ns.getPlayer().hacking < 2500 || ns.getServerMoneyAvailable("home") < 100000000000) {
 		await ns.sleep(1000);
 	}
@@ -39,9 +43,9 @@ export async function main(ns) {
 		await ns.sleep(5000);
 	}
 	ns.joinFaction("Daedalus");
-	if (ns.getFactionFavor("Daedalus") < 150 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
+	if (ns.getFactionFavor("Daedalus") < 150) {
 		ns.run("waitForFavor.js");
-		ns.kill("sendBatches.js");
+		ns.kill("sendBatches.js", "home");
 		ns.run("orchestrate.js", 1, "stop");
 		ns.run("warthogs.js", 1, "stop");
 		ns.run("orchestrate.js", 1, "share");

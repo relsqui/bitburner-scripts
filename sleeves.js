@@ -3,25 +3,24 @@
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
-/* TODO:
-from https://github.com/danielyxie/bitburner/blob/dev/src/Crime/Crime.ts
-  successRate(p: IPlayerOrSleeve): number {
-    let chance: number =
-      this.hacking_success_weight * p.hacking +
-      this.strength_success_weight * p.strength +
-      this.defense_success_weight * p.defense +
-      this.dexterity_success_weight * p.dexterity +
-      this.agility_success_weight * p.agility +
-      this.charisma_success_weight * p.charisma +
-      CONSTANTS.IntelligenceCrimeWeight * p.intelligence;
-    chance /= CONSTANTS.MaxSkillLevel;
-    chance /= this.difficulty;
-    chance *= p.crime_success_mult;
-    chance *= p.getIntelligenceBonus(1);
-
+function crimeSuccessRate(ns, i, crime) {
+    // adapted from https://github.com/danielyxie/bitburner/blob/dev/src/Crime/Crime.ts
+    const stats = ns.sleeve.getSleeveStats(i);
+    const crimeStats = ns.getCrimeStats(crime);
+    // defined in Constants.ts, afaict I can't get at it from code
+    const maxSkillLevel = 975;
+    let chance =
+      crimeStats.hacking_success_weight * stats.hacking +
+      crimeStats.strength_success_weight * stats.strength +
+      crimeStats.defense_success_weight * stats.defense +
+      crimeStats.dexterity_success_weight * stats.dexterity +
+      crimeStats.agility_success_weight * stats.agility +
+      crimeStats.charisma_success_weight * stats.charisma;
+    chance /= maxSkillLevel;
+    chance /= crimeStats.difficulty;
+    chance *= ns.sleeve.getInformation(i).mult.crimeSuccess;
     return Math.min(chance, 1);
-  }
-*/
+}
 
 function formatTask(ns, i, t) {
     const task = t || ns.sleeve.getTask(i);
@@ -34,6 +33,9 @@ function formatTask(ns, i, t) {
     }
     if (details.length > 0) {
         taskString += ` (${details.join(", ")})`;
+    }
+    if (task.task = "Crime") {
+        taskString += ` ${ns.nFormat(crimeSuccessRate(ns, i, task.crime), "0%")}`;
     }
     return taskString;
 }
@@ -51,7 +53,13 @@ function formatStats(ns, i) {
     return formatted;
 }
 
-function assignCrime(ns, i, crime) {
+function assignCrime(ns, i, crimes) {
+    let crime;
+    for (crime of crimes) {
+        if (crimeSuccessRate(ns, i, crime) > 0) {
+            break;
+        }
+    }
     const task = ns.sleeve.getTask(i);
     if (task.crime == crime) {
         return;
@@ -108,6 +116,19 @@ function buyAnAugment(ns, i) {
     }
 }
 
+function studyCS(ns, i) {
+    let course = "Study Computer Science";
+    if (getSettings(ns).sleeves.buying && ns.getServerMoneyAvailable("home") > 300000000) {
+        ns.sleeve.travel(i, "Volhaven");
+        course = "Algorithms";
+    }
+    if (ns.sleeve.getInformation(i).city == "Volhaven") {
+        ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", course);
+    } else {
+        ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
+    }
+}
+
 export async function main(ns) {
     ns.disableLog("ALL");
     const labels = ["#", "Shock", "Sync", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task"];
@@ -126,34 +147,14 @@ export async function main(ns) {
             } else if (s.shock > 50) {
                 ns.sleeve.setToShockRecovery(i);
             } else if (!ns.gang.inGang()) {
-                if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
-                    assignCrime(ns, i, "Mug");
-                } else {
-                    assignCrime(ns, i, "Homicide");
-                }
+                assignCrime(ns, i, ["Homicide", "Mug"]);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
-            // } else if (s.shock > 0) {
-            //     ns.sleeve.setToShockRecovery(i);
-            } else if (s.hacking < 100 || p.hacking < 200) {
-                let course = "Study Computer Science";
-                if (getSettings(ns).sleeves.buying && ns.getServerMoneyAvailable("home") > 300000000) {
-                    ns.sleeve.travel(i, "Volhaven");
-                    course = "Algorithms";
-                }
-                if (ns.sleeve.getInformation(i).city == "Volhaven") {
-                    ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", course);
-                } else {
-                    ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
-                }
+            } else if (s.hacking < 100 || p.hacking < 200 ||
+                (ns.getOwnedAugmentations("The Red Pill") && p.hacking < ns.getServerRequiredHackingLevel("w0r1d_d43m0n"))) {
+                studyCS(ns, i);
             } else {
-                if (s.agility < 70 || s.defense < 70 || s.dexterity < 70 || s.strength < 70) {
-                    assignCrime(ns, i, "Mug");
-                } else if (s.agility < 400 || s.defense < 400 || s.dexterity < 400 || s.strength < 400) {
-                    assignCrime(ns, i, "Homicide");
-                } else {
-                    assignCrime(ns, i, "Heist");
-                }
+                assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
             }
             rows.push(formatStats(ns, i));
         }

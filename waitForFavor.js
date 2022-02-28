@@ -13,8 +13,8 @@ export async function main(ns) {
         ns.workForFaction(faction, ns.args[1] || "Hacking Contracts", false);
         favorGain = ns.getFactionFavorGain(faction);
         ns.clearLog();
-        ns.print(`(${fmt(favorSoFar)} + ${fmt(favorGain)}) / ${neededFavor} favor`);
-        ns.print("Share power: " + ns.getSharePower().toString().slice(0, 12));
+        ns.print(`(${fmt(favorSoFar)} + ${fmt(favorGain)}) = ${fmt(favorSoFar+favorGain)} / ${neededFavor}`);
+        ns.print("Share power: " + ns.getSharePower());
         await ns.sleep(5000);
     } while (favorSoFar + favorGain < neededFavor);
     ns.toast("Time to install!", "success");
