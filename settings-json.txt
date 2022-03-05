@@ -1,20 +1,35 @@
 {
     "batches": {
         "homeReservedRam": 100,
-        "delay": 100
+        "delay": 10
+    },
+    "corp": {
+        "expanding": true,
+        "hiring": true,
+        "hiringCap": 500,
+        "buyAnalytics": null,
+        "delay": 10000
     },
     "gang": {
         "priority": null,
         "buying": true,
+        "maxSpend": null,
         "repTarget": 1800000,
         "moneyTarget": null
     },
     "servers": {
         "buying": true,
-        "maxSpend": null
+        "maxSpend": null,
+        "toasts": false
     },
     "sleeves": {
         "buying": true,
-        "maxSpend": null
+        "maxSpend": null,
+        "augTypes": {
+            "hacking": true,
+            "other": true
+        },
+        "crimeSuccessThreshold": null,
+        "instruction": "cha"
     }
 }

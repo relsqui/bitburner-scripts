@@ -44,7 +44,8 @@ async function maybeAscend(ns, name) {
 async function equipEveryone(ns, gangMembers, equipment) {
 	for (let equip of equipment) {
 		for (let name of gangMembers) {
-			if (ns.gang.purchaseEquipment(name, equip)) {
+			if (ns.gang.getEquipmentCost(equip) < (getSettings(ns).gang.maxSpend || ns.getServerMoneyAvailable("home"))
+				&& ns.gang.purchaseEquipment(name, equip)) {
 				ns.print(`Bought ${equip} for ${name}.`);
 				ns.toast(`Bought ${equip} for ${name}.`, "info");
 			}
@@ -52,19 +53,24 @@ async function equipEveryone(ns, gangMembers, equipment) {
 	}
 }
 
-async function assignTasksForTick(ns, enemy, getEnemy, gangMembers, enableTerritory) {
+async function assignTasksForTick(ns, enemy, getEnemy, gangMembers) {
 	function getGang() {
 		return ns.gang.getGangInformation();
 	}
 
 	const oldPower = getGang().power;
 	const oldEnemyPower = getEnemy().power;
+	const weRunTheCity = Number(getGang().territory) >= 0.99;
 
-	ns.gang.setTerritoryWarfare(enableTerritory && oldPower > oldEnemyPower && getGang().territory < 1);
+	ns.gang.setTerritoryWarfare(oldPower > oldEnemyPower && !weRunTheCity);
 
-	ns.print("Assigning gang to fight for territory ...");
-	for (let member of gangMembers) {
-		ns.gang.setMemberTask(member, "Territory Warfare");
+	if (weRunTheCity) {
+		ns.print("Skipping territory assignment because we run this city.");
+	} else {
+		ns.print(`Assigning gang to fight for territory (${getGang().territory})...`);
+		for (let member of gangMembers) {
+			ns.gang.setMemberTask(member, "Territory Warfare");
+		}
 	}
 
 	await waitForTick(ns, getEnemy);
@@ -213,7 +219,6 @@ function choosePriority(ns) {
 
 export async function main(ns) {
 	ns.disableLog("ALL");
-	const enableTerritory = true;
 	const tickSpacing = 17500;
 	let [biggestEnemy, enemyPower, enemyInfoFn] = getBiggestEnemy(ns);
 	ns.print(`Biggest enemy is ${biggestEnemy} with ${enemyPower} power.`);
@@ -238,7 +243,7 @@ export async function main(ns) {
 		[biggestEnemy, enemyPower, enemyInfoFn] = getBiggestEnemy(ns);
 		ns.print(`Biggest enemy is ${biggestEnemy} with ${enemyPower} power.`);
 		if (buildPower) {
-			await assignTasksForTick(ns, biggestEnemy, enemyInfoFn, gangMembers, enableTerritory);
+			await assignTasksForTick(ns, biggestEnemy, enemyInfoFn, gangMembers);
 		}
 		setTasks(ns, priority, taskTable);
 		if (buying) {

@@ -8,9 +8,9 @@ function upgradedMoneyGainRate(ns, { MaxCores, MaxLevel, MaxRam }) {
 function upgradedNodeCost(ns) {
     // TODO: calculate these
     return ns.hacknet.getPurchaseNodeCost() + 
-        18416000 + // max levels
-        3667000 + // max ram
-        252817000; // max cores
+        4161000 + // max levels
+        828449 + // max ram
+        57124000; // max cores
 }
 
 function canBuyAnotherNode(ns) {

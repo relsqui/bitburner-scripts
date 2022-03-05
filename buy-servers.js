@@ -6,8 +6,15 @@ import { getSettings } from './settings.js';
 
 let ram;
 let nameScheme;
-let defaultRam = 16;
+let defaultRam = 8;
 let defaultName = "warthog";
+
+// it MIGHT become toast
+function bread(ns, ...args) {
+	if (getSettings(ns).servers.toasts) {
+		ns.toast(...args);
+	}
+}
 
 function canAffordServer(ns) {
 	const maxSpend = getSettings(ns).servers.maxSpend;
@@ -42,7 +49,7 @@ export async function main(ns) {
 		}
 		let newServer = await buyServer(ns);
 		if (newServer) {
-			ns.toast("Bought " + newServer + " with " + ramString(ns));
+			bread(ns, "Bought " + newServer + " with " + ramString(ns));
 			ns.print("Bought " + newServer + " with " + ramString(ns));
 
 			purchasedServers = ns.getPurchasedServers();
@@ -74,7 +81,7 @@ export async function main(ns) {
 				// 	await ns.sleep(1000);
 				// }
 				ns.print(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`);
-				ns.toast(`Upgrading ${purchasedServers[i]} to ${ramString(ns)}`, "info", 500);
+				bread(ns, `Upgrading ${purchasedServers[i]} to ${ramString(ns)}`, "info", 500);
 				ns.killall(server);
 				ns.deleteServer(server);
 				purchasedServers[i] = await buyServer(ns);
@@ -82,7 +89,7 @@ export async function main(ns) {
 		}
 		ram *= 2;
 		if (ram > ns.getPurchasedServerMaxRam()) {
-			ns.toast("Maximum server size reached. Have a nice day!");
+			bread(ns, "Maximum server size reached. Have a nice day!");
 			ns.tprint("Maximum server size reached. Have a nice day!");
 			break;
 		} else {

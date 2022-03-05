@@ -51,6 +51,9 @@ export async function main(ns) {
         // if we don't keep tail up it's hard to stop this script
         ns.tail();
         ns.print(`Expected rate: ${ev(crimes[0])*1000} ${priority}/s`);
+        if (["karma", "kills"].includes(priority)) {
+            ns.print(`Kills so far: ${ns.getPlayer().numPeopleKilled}`);
+        }
         await ns.commitCrime(crimes[0]);
         while (ns.isBusy()) {
             await ns.sleep(10);

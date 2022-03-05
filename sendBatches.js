@@ -30,7 +30,7 @@ function findTargets(ns) {
 }
 
 function hasMemory(ns, host) {
-	return ns.getServerMaxRam(host) >= 16;
+	return ns.getServerMaxRam(host) >= 8;
 }
 
 function findHosts(ns) {

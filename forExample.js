@@ -1,7 +1,9 @@
 /** @param {NS} ns **/
 
+function manyArgs(...args) {
+    return args;
+}
+
 export async function main(ns) {
-    ns.tprint(Date());
-    ns.tprint(Date.now());
-    ns.tprint(Math.max());
+    ns.tprint(manyArgs(1, 2, 3));
 }

@@ -34,14 +34,14 @@ function formatTask(ns, i, t) {
     if (details.length > 0) {
         taskString += ` (${details.join(", ")})`;
     }
-    if (task.task = "Crime") {
+    if (task.task = "Crime" && task.crime) {
         taskString += ` ${ns.nFormat(crimeSuccessRate(ns, i, task.crime), "0%")}`;
     }
     return taskString;
 }
 
 function formatStats(ns, i) {
-    const formatted = [i];
+    const formatted = [i, ns.sleeve.getSleeveAugmentations(i).length];
     const stats = ns.sleeve.getSleeveStats(i);
     for (let key of ["shock", "sync"]) {
         formatted.push(ns.nFormat(stats[key], "0.000"));
@@ -54,9 +54,10 @@ function formatStats(ns, i) {
 }
 
 function assignCrime(ns, i, crimes) {
+    const crimeSuccessThreshold = getSettings(ns).sleeves.crimeSuccessThreshold || 0.5;
     let crime;
     for (crime of crimes) {
-        if (crimeSuccessRate(ns, i, crime) > 0) {
+        if (crimeSuccessRate(ns, i, crime) > crimeSuccessThreshold) {
             break;
         }
     }
@@ -103,10 +104,10 @@ function buyAnAugment(ns, i) {
     const maxSpend = getSettings(ns).sleeves.maxSpend || ns.getServerMoneyAvailable("home");
     augments = augments.filter((a) => a.cost < maxSpend);
     let augsToGet = augments.filter(hasCrimeBuffs);
-    if (augsToGet.length == 0) {
+    if (augsToGet.length == 0 && getSettings(ns).sleeves.augTypes.hacking) {
         augsToGet = augments.filter(hasHackBuffs);
     }
-    if (augsToGet.length == 0) {
+    if (augsToGet.length == 0 && getSettings(ns).sleeves.augTypes.other) {
         augsToGet = augments;
     }
     augsToGet.sort((a, b) => a.cost - b.cost);
@@ -131,7 +132,7 @@ function studyCS(ns, i) {
 
 export async function main(ns) {
     ns.disableLog("ALL");
-    const labels = ["#", "Shock", "Sync", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task"];
+    const labels = ["#", "Aug", "Shock", "Sync", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task"];
     while (true) {
         ns.clearLog();
         const sleeveCount = ns.sleeve.getNumSleeves();
@@ -142,16 +143,32 @@ export async function main(ns) {
             }
             const s = ns.sleeve.getSleeveStats(i);
             const p = ns.getPlayer();
-            if (s.sync < 100) {
+            const instruction = getSettings(ns).sleeves.instruction;
+            if (instruction) {
+                switch (instruction) {
+                    case "cs":
+                        studyCS(ns, i);
+                        break;
+                    case "cha":
+                        ns.sleeve.travel(i, "Volhaven");
+                        ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", "Leadership");
+                        break;
+                    case "money":
+                        assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
+                        break;
+                }
+            } else if (s.sync < 100) {
                 ns.sleeve.setToSynchronize(i);
             } else if (s.shock > 50) {
                 ns.sleeve.setToShockRecovery(i);
+            } else if (p.hacking < 50) {
+                studyCS(ns, i);
             } else if (!ns.gang.inGang()) {
                 assignCrime(ns, i, ["Homicide", "Mug"]);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
-            } else if (s.hacking < 100 || p.hacking < 200 ||
-                (ns.getOwnedAugmentations("The Red Pill") && p.hacking < ns.getServerRequiredHackingLevel("w0r1d_d43m0n"))) {
+            } else if ((s.hacking < 100 && p.hacking < 200) ||
+                (ns.getOwnedAugmentations().includes("The Red Pill") && p.hacking < ns.getServerRequiredHackingLevel("w0r1d_d43m0n"))) {
                 studyCS(ns, i);
             } else {
                 assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
