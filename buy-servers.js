@@ -43,6 +43,7 @@ export async function main(ns) {
 	nameScheme = defaultName;
 	const loop = (ns.args[0] == "loop");
 	let purchasedServers = ns.getPurchasedServers();
+	ns.print(`First ${ramString(ns)} server will cost ${ns.nFormat(ns.getPurchasedServerCost(ram), "$0.00a")}.`);
 	while (purchasedServers.length < ns.getPurchasedServerLimit()) {
 		while (!getSettings(ns).servers.buying) {
 			await ns.sleep(1000);
@@ -63,6 +64,17 @@ export async function main(ns) {
 		}
 	}
 	while (true) {
+		ram *= 2;
+		if (ram > ns.getPurchasedServerMaxRam()) {
+			bread(ns, "Maximum server size reached. Have a nice day!");
+			ns.tprint("Maximum server size reached. Have a nice day!");
+			break;
+		} else {
+			const cost = ns.nFormat(ns.getPurchasedServerCost(ram), "$0.00a");
+			ns.print(`Raising server size to ${ramString(ns)} (${cost})`);
+			await ns.sleep(1);
+		}
+		
 		for(let i=0; i<purchasedServers.length; i++) {
 			while (!getSettings(ns).servers.buying) {
 				await ns.sleep(1000);
@@ -86,16 +98,6 @@ export async function main(ns) {
 				ns.deleteServer(server);
 				purchasedServers[i] = await buyServer(ns);
 			}
-		}
-		ram *= 2;
-		if (ram > ns.getPurchasedServerMaxRam()) {
-			bread(ns, "Maximum server size reached. Have a nice day!");
-			ns.tprint("Maximum server size reached. Have a nice day!");
-			break;
-		} else {
-			const cost = ns.nFormat(ns.getPurchasedServerCost(ram), "$0.00a");
-			ns.print(`Raising server size to ${ramString(ns)} (${cost})`);
-			await ns.sleep(1);
 		}
 	}
 }

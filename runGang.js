@@ -37,8 +37,10 @@ async function maybeAscend(ns, name) {
 		if (ns.gang.ascendMember(name)) {
 			ns.print(`Ascended ${name}!`);
 			ns.toast(`Ascended ${name}!`, "success", 4000);
+			return true;
 		}
 	}
+	return false;
 }
 
 async function equipEveryone(ns, gangMembers, equipment) {
@@ -251,7 +253,10 @@ export async function main(ns) {
 			gangMembers = ns.gang.getMemberNames();
 			gangMembers.sort((a, b) => averageCombatMult(ns, b) - averageCombatMult(ns, a));
 			for (let member of gangMembers) {
-				maybeAscend(ns, member);
+				if (maybeAscend(ns, member)) {
+					// don't ascend more than one per tick
+					break;
+				}
 			}
 			equipEveryone(ns, gangMembers, equipment);
 		}

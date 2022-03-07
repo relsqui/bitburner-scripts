@@ -1,4 +1,5 @@
 /** @param {NS} ns **/
+import { makeWeightedVolWh } from './optimizeWarehouse.js';
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
@@ -55,17 +56,8 @@ function sellMaterials(ns, {division, city}) {
 }
 
 function stockWarehouse(ns, { division, city }) {
-    // have not figured out how the rest of this should work yet
-    if (division.type != "Agriculture") {
-        return ns.corporation.getWarehouse(division.name, city);
-    }
+    const targetInv = makeWeightedVolWh(division.type, ns.corporation.getWarehouse(division.name, city).size/2);
 
-    const targetInv = {
-        "Hardware": 9300,
-        "Robots": 726,
-        "AI Cores": 6270,
-        "Real Estate": 230400,
-    };
     for (let key of Object.keys(targetInv)) {
         const material = ns.corporation.getMaterial(division.name, city, key);
         // sell price is over 10 seconds
@@ -344,7 +336,9 @@ export async function main(ns) {
     while (true) {
         const data = [];
         const corp = ns.corporation.getCorporation();
-        if (corp.funds > ns.corporation.getUpgradeLevelCost("Wilson Analytics")) {
+        const maxAnalytics = getSettings(ns).corp.maxAnalytics;
+        if (corp.funds > ns.corporation.getUpgradeLevelCost("Wilson Analytics") &&
+            ((!maxAnalytics) || ns.corporation.getUpgradeLevel("Wilson Analytics") < maxAnalytics)) {
             ns.toast("Upgrading Wilson Analytics");
             ns.corporation.levelUpgrade("Wilson Analytics");
         }

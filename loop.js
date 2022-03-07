@@ -1,5 +1,6 @@
 /** @param {NS} ns **/
 
+import { getAugments } from './buyAugments.js';
 import goto from "goto.js";
 import { hosts_by_distance } from "breadth-first.js";
 
@@ -57,8 +58,14 @@ export async function main(ns) {
 	}
 	ns.tprint("All servers owned.");
 	while (true) {
+		ns.clearLog();
 		await checkBackdoors(ns);
 		joinAllFactions(ns);
+		const augsAvailable = await getAugments(ns);
+		ns.print(`${augsAvailable} augments available.`);
+		if (augsAvailable > 10) {
+			ns.run("shutdown.js");
+		}
 		await ns.sleep(1000);
 	}
 }

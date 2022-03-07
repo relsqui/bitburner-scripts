@@ -58,7 +58,7 @@ export function makeTable(ns, data, labels = [], settings = {}, id = null) {
         }
         widthMemory[id] = widths.slice();
     }
-    if (labels) {
+    if (data.length && labels) {
         lines.push(" " + rectifyRow(ns, labels, widths, joiner));
         lines.push(" " + horizontalRule(ns, widths, hrChar, hrJoiner));
     }

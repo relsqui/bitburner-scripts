@@ -3,6 +3,15 @@
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
+function hasAllRootPrograms(ns) {
+	for (let file of ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"]) {
+		if (!ns.fileExists(file, "home")) {
+			return false;
+		}
+	}
+    return true;
+}
+
 function crimeSuccessRate(ns, i, crime) {
     // adapted from https://github.com/danielyxie/bitburner/blob/dev/src/Crime/Crime.ts
     const stats = ns.sleeve.getSleeveStats(i);
@@ -157,14 +166,16 @@ export async function main(ns) {
                         assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
                         break;
                 }
-            } else if (s.sync < 100) {
-                ns.sleeve.setToSynchronize(i);
             } else if (s.shock > 50) {
                 ns.sleeve.setToShockRecovery(i);
+            } else if (!ns.gang.inGang()) {
+                assignCrime(ns, i, ["Homicide"]);
+            } else if (s.sync < 100) {
+                ns.sleeve.setToSynchronize(i);
+            } else if (!hasAllRootPrograms(ns)) {
+                assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
             } else if (p.hacking < 50) {
                 studyCS(ns, i);
-            } else if (!ns.gang.inGang()) {
-                assignCrime(ns, i, ["Homicide", "Mug"]);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
             } else if ((s.hacking < 100 && p.hacking < 200) ||

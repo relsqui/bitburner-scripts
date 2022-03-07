@@ -18,14 +18,17 @@ function targetValue(ns, host) {
 }
 
 function findTargets(ns) {
-	const myHack = ns.getHackingLevel();
 	const targets = hosts_by_distance(ns)
 		// TODO: don't hardcode the name scheme
 		.filter((h) => !h.startsWith("warthog"))
 		.filter(ns.hasRootAccess)
 		.filter((h) => ns.getServerMaxMoney(h) > 0)
-		.filter((h) => myHack >= ns.getServerRequiredHackingLevel(h))
+		.filter((h) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(h))
+		.filter((h) => h != ns.args[0])
 		.sort((a, b) => targetValue(ns, b) - targetValue(ns, a));
+	if (ns.args[0]) {
+		targets.unshift(ns.args[0]);
+	}
 	return targets;
 }
 
