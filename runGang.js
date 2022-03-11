@@ -209,9 +209,9 @@ function choosePriority(ns) {
 		return prioritySetting;
 	}
 	const repTarget = getSettings(ns).gang.repTarget || 2500000;
-	const moneyTarget = getSettings(ns).gang.moneyTarget || 1000000;
+	const moneyTarget = getSettings(ns).gang.moneyTarget;
 	const gang = ns.gang.getGangInformation();
-	if (ns.getServerMoneyAvailable("home") < moneyTarget ||
+	if ((moneyTarget && ns.getServerMoneyAvailable("home") < moneyTarget) ||
 		ns.getFactionRep(gang.faction) > repTarget || 
 		gang.territory == 1) {
 		return "money";

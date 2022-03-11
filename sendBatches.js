@@ -1,6 +1,7 @@
 /** @param {NS} ns **/
 import { hosts_by_distance } from "./breadth-first.js";
 import { deployBatchPlan, getMaxBatches } from './makeBatchPlan.js';
+import { getSettings } from './settings.js';
 import { buildMonitorTable } from './watchBatches.js';
 
 export function autocomplete(data, args) {
@@ -39,14 +40,19 @@ function hasMemory(ns, host) {
 function findHosts(ns) {
 	const purchased = ns.getPurchasedServers();
 	let hosts;
+	// TODO: put home back
 	if (purchased.length > 0 && ns.getServerMaxRam(purchased[0]) == ns.getPurchasedServerMaxRam()) {
-		hosts = ["home", ...purchased];
+		hosts = [...purchased];
 	} else {
-		hosts = ["home", ...hosts_by_distance(ns)].filter(ns.hasRootAccess);
+		hosts = [...hosts_by_distance(ns)].filter(ns.hasRootAccess);
 	}
-	hosts = hosts.filter((h) => hasMemory(ns, h))
-		.sort((a, b) => ns.getServerMaxRam(b) - ns.getServerMaxRam(a) ||
-			ns.getServer(b).cpuCores - ns.getServer(a).cpuCores);
+	hosts = hosts
+		.filter((h) => !h.startsWith("hacknet-node-"))
+		.filter((h) => hasMemory(ns, h))
+		.sort((a, b) =>
+			ns.getServerMaxRam(b) - ns.getServerMaxRam(a) ||
+			ns.getServer(b).cpuCores - ns.getServer(a).cpuCores
+		);
 	return hosts;
 }
 
@@ -61,7 +67,10 @@ function getAllottedRam(ns, host, oldPlans) {
 }
 
 function hasEnoughMemory(ns, host, oldPlans, newPlan) {
-	const newAllotted = getAllottedRam(ns, host, oldPlans) + (newPlan.batchCount * newPlan.ram.ramPerBatch);
+	let newAllotted = getAllottedRam(ns, host, oldPlans) + (newPlan.batchCount * newPlan.ram.ramPerBatch);
+	if (host == "home") {
+		newAllotted += getSettings(ns).batches.homeReservedRam || 0;
+	}
 	return newAllotted < ns.getServerMaxRam(host);
 }
 
@@ -143,7 +152,7 @@ export async function sendBatches(ns) {
 		let target = null;
 		for (let i = 0; i < targets.length; i++) {
 			batchCounts[targets[i]] = batchCounts[targets[i]] || 0;
-			if (batchCounts[targets[i]] < getMaxBatches(ns, targets[i], delay)) {
+			if (batchCounts[targets[i]] < getMaxBatches(ns, targets[i], delay) * 0.5) {
 				target = targets[i];
 				break;
 			}
@@ -153,6 +162,10 @@ export async function sendBatches(ns) {
 		}
 
 		let host = hosts[hostIndex];
+		if (!host) {
+			hostIndex = 0;
+			host = hosts[hostIndex];
+		}
 		let originalIndex = hostIndex;
 		plans[host] = plans[host] || {};
 		plans[host][target] = plans[host][target] || {};
@@ -164,7 +177,6 @@ export async function sendBatches(ns) {
 		}
 
 		let batchPlan = await deployBatchPlan(ns, host, target, batchOptions);
-		originalIndex = hostIndex;
 		while (batchPlan.maxBatchCount <= 0) {
 			cleanUp(ns, batchPlan);
 			hostIndex = (hostIndex + 1) % hosts.length;

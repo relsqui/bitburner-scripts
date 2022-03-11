@@ -1,8 +1,29 @@
 /** @param {NS} ns **/
 
+import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
+function totalMult(augment, keys) {
+    return Object.keys(augment)
+        .filter((k) => {
+            for (let key of keys) {
+                if (k.startsWith(key)) return true;
+            }
+        })
+        .map((k) => augment[k])
+        .reduce((sum, mult) => sum * mult, 1);
+}
+
 function getAllAugments(ns, includingNFG=false) {
+    const statPrefixes = {
+        hack: ["hacking"],
+        crime: ["crime"],
+        combat: ["strength", "defense", "dexterity", "agility"],
+        cha: ["charisma"],
+        c_rep: ["company_rep"],
+        f_rep: ["faction_rep"],
+        hacknet: ["hacknet"],
+    }
     const augments = {};
     for (let faction of ns.getPlayer().factions) {
         for (let aug of ns.getAugmentationsFromFaction(faction)) {
@@ -14,31 +35,21 @@ function getAllAugments(ns, includingNFG=false) {
             } else {
                 augments[aug] = {
                     name: aug,
+                    to_buy: false,
                     price: ns.getAugmentationPrice(aug),
                     rep: ns.getAugmentationRepReq(aug),
                     factions: [faction],
                     prereqs: ns.getAugmentationPrereq(aug),
                     ... ns.getAugmentationStats(aug)
                 };
+                for (let [key, prefixes] of Object.entries(statPrefixes)) {
+                    augments[aug][key] = totalMult(augments[aug], prefixes);
+                }
             }
         }
     }
-    return augments;
-}
-
-function makeRow(ns, augment) {
-    function totalMult(key) {
-        return Object.keys(augment)
-            .filter((k) => k.startsWith(key))
-            .map((k) => augment[k])
-            .reduce((sum, mult) => sum * mult, 1);
-    }
-    function fmtMult(key) {
-        return totalMult(key) == 1 ? "" : ns.nFormat(totalMult(key), "0.0000");
-    }
-    const hack = fmtMult("hacking");
-    const crime = fmtMult("crime");
-    return [augment.name, ns.nFormat(augment.price, "$0.00a"), ns.nFormat(augment.rep, "0.00a"), hack, crime, augment.factions];
+    // we only made this an object to dedupe and collect factions
+    return Object.values(augments);
 }
 
 function pickFaction(ns, aug) {
@@ -50,64 +61,99 @@ function pickFaction(ns, aug) {
     return null;
 }
 
+function hasAug(ns, aug) {
+    return ns.getOwnedAugmentations(true).includes(aug.name);
+}
+
 function canBuy(ns, aug) {
     if (ns.getServerMoneyAvailable("home") < aug.price) {
         return false;
     }
-    if (!pickFaction) {
+    if (!pickFaction(ns, aug)) {
+        return false;
+    }
+    if (hasAug(ns, aug)) {
         return false;
     }
     const owned = ns.getOwnedAugmentations();
-    if (owned.includes(aug.name)) {
+    if (!aug.prereqs.reduce((haveAllPrereqs, prereq) => haveAllPrereqs && owned.includes(prereq), true)) {
         return false;
-    }
-    for (let prereq of aug.prereqs) {
-        if (!owned.includes(prereq)) {
-            return false;
-        }
     }
     return true;
 }
 
+function totalPrice(augs) {
+    // don't alter the list passed in
+    const augments = augs.slice();
+    augments.sort((a, b) => b.price - a.price);
+    let multiplier = 1;
+    let price = 0;
+    for (let augment of augments) {
+        price += augment.price * multiplier;
+        multiplier *= 1.9;
+    }
+    return price;
+}
+
 function makeRows(ns, augments) {
     let rows = [];
-    for (let aug of Object.values(augments).filter((aug) => canBuy(ns, aug))) {
-        const row = makeRow(ns, aug);
-        if (row) {
-            rows.push(row);
+    for (let augment of augments) {
+        const row = [
+            augment.name,
+            canBuy(ns, augment) ? "X" : hasAug(ns, augment) ? "-" : "",
+            augment.to_buy ? "#" : "",
+            ns.nFormat(augment.price, "$0.00a"),
+        ];
+        for (let key of ["rep", "hack", "hacknet", "crime", "combat", "cha", "c_rep", "f_rep"]) {
+            row.push(ns.nFormat(augment[key], "0.00a"));
         }
+        row.push(augment.factions.toString().replace(/[a-z ]/g, ""));
+        rows.push(row);
     }
     return rows;
 }
 
 export async function getAugments(ns, purchase=false, print=false) {
-    const labels = ["Augment", "Price", "Rep", "Hack", "Crime", "Factions"];
-    const key = "Hack";
-    const augments = getAllAugments(ns);
-    let rows = makeRows(ns, augments);
+    const labels = ["Name", "?", "$", "Price", "Rep", "Hack", "HNet", "Crime", "Combat", "Cha", "C Rep", "F Rep", "Factions"];
+    const sortKey = getSettings(ns).loop.augPriority || "hack";
+    let augments = getAllAugments(ns).filter((a) => !hasAug(ns, a));
+    augments = augments
+        .filter((a) => a[sortKey] > 1)
+        .sort((a, b) => b[sortKey]/b.price - a[sortKey]/a.price)
+        .concat(...augments
+            .filter((a) => a[sortKey] == 1)
+            .sort((a, b) => a.price - b.price)
+        );
 
-    function value(row) {
-        return Number(row[labels.indexOf(key)]) / augments[row[0]].price;
+    const maybeBuy = augments.slice().filter((a) => canBuy(ns, a));
+    for (let i=0; i < maybeBuy.length && totalPrice(maybeBuy.slice(0, i+1)) < ns.getServerMoneyAvailable("home"); i++) {
+        augments[augments.indexOf(maybeBuy[i])].to_buy = true;
     }
-
-    rows = rows.filter(value).sort((a, b) => value(b) - value(a));
 
     if (purchase) {
-        let bought = 0;
-        for (let row of rows) {
-            const augment = augments[row[0]];
+        augments = augments
+            .filter((aug) => aug.to_buy)
+            .sort((a, b) => b.price - a.price);
+        for (let augment of augments) {
             const faction = pickFaction(ns, augment);
+            let multiplier = 1;
             if (ns.purchaseAugmentation(faction, augment.name)) {
-                ns.toast(`Bought ${augment.name} for ${ns.nFormat(augment.price, "$0.00a")}.`);
-                bought++;
+                ns.tprint(`Bought ${augment.name} for ${ns.nFormat(augment.price * multiplier, "$0.00a")}.`);
+                multiplier *= 1.9;
+            } else {
+                ns.tprint(`Failed to buy ${augment.name}, bailing`);
+                ns.exit();
             }
         }
-        return bought;
-    } else if (rows.length && print) {
-        ns.tprintf(makeTable(ns, rows, labels));
-        ns.tprintf("\nCall this script with -y to do the purchase.");
+        return augments;
+    } else if (augments.length && print) {
+        const numToShow = 12; // or the buyable ones, if that's more
+        const augsToShow = maybeBuy.length > numToShow ? maybeBuy : augments.slice(0, numToShow);
+        const price = ns.nFormat(totalPrice(augments.filter((a) => a.to_buy)), "$0.00a");
+        ns.tprintf(makeTable(ns, makeRows(ns, augsToShow), labels));
+        ns.tprintf(`\nCall this script with -y to buy the augments with a # in the \$ column for ${price}.`);
     }
-    return rows.length;
+    return maybeBuy;
 }
 
 export async function main(ns) {

@@ -1,9 +1,7 @@
 /** @param {NS} ns **/
 import { getAugments } from './buyAugments.js';
 
-export async function main(ns) {
-    let delay = Number(ns.args[0] || 30);
-    ns.disableLog("ALL");
+async function installAugments(ns, delay=3) {
     if (await getAugments(ns) == 0) {
         ns.tprint("No hacking augments available.");
         ns.exit();
@@ -19,5 +17,17 @@ export async function main(ns) {
         ns.tprint("Nothing installed, not shutting down yet.");
         ns.exit();
     }
+}
+
+async function upgradeHome(ns) {
+    while (ns.upgradeHomeRam() || ns.upgradeHomeCores()) {
+        await ns.sleep(10);
+    }
+}
+
+export async function main(ns) {
+    ns.disableLog("ALL");
+    await installAugments(ns, ns.args[0]);
+    await upgradeHome(ns);
     ns.installAugmentations("startup.js");
 }

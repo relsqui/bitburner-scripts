@@ -5,10 +5,11 @@ export async function main(ns) {
 	ns.disableLog("sleep");
 	ns.run("find-contracts.js", 1, "loop");
 	ns.run("sleeves.js");
+	ns.run("hacknetServers.js");
 	if (ns.gang.inGang()) {
 		ns.run("runGang.js");
 	}
-	if (ns.getPlayer().hasCorporation) {
+	if (ns.getPlayer().hasCorporation && ns.getServerMaxRam("home") > 1024) {
 		ns.run("runCorp.js");
 	}
 	ns.run("loop.js");
@@ -24,6 +25,10 @@ export async function main(ns) {
 	}
 	ns.run("buy-servers.js", 1, "loop");
 	if (ns.getServerMoneyAvailable("home") < 100000000 || ns.getOwnedAugmentations(true).includes("The Red Pill")) {
+		// ns.run("getJobs.js")
+		if (!ns.gang.inGang()) {
+			ns.run("doCrimes.js", 1, "karma");
+		}
 		ns.exit();
 	}
 	if (ns.getPlayer().hacking < 2500 && ns.getServerMoneyAvailable("home") > 200000 && ns.travelToCity("Volhaven")) {
@@ -37,11 +42,14 @@ export async function main(ns) {
 	if (ns.getFactionFavor("Daedalus") < 150) {
 		ns.run("waitForFavor.js");
 		ns.kill("sendBatches.js", "home");
+		ns.kill("loop.js", "home");
 		ns.run("orchestrate.js", 1, "stop");
 		ns.run("warthogs.js", 1, "stop");
 		ns.run("orchestrate.js", 1, "share");
+		ns.run("loop.js");
 		ns.run("warthogs.js", 1, "share");
 		ns.run("share-it.js", 1, "home");
+	} else {
+		ns.toast("LFGGGGGGGGGGGG", "success", 5000);
 	}
-	ns.toast("LFGGGGGGGGGGGG", "success", 5000);
 }

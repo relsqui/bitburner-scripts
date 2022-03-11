@@ -1,4 +1,11 @@
 {
+    "loop": {
+        "upgradeHome": true,
+        "dontJoinFactions": false,
+        "joinCities": true,
+        "augPriority": "hack",
+        "minAugsToBuy": null
+    },
     "batches": {
         "homeReservedRam": 100,
         "delay": 100
@@ -6,30 +13,38 @@
     "corp": {
         "expanding": true,
         "hiring": true,
-        "hiringCap": 300,
-        "maxAnalytics": 25,
-        "delay": 10000
+        "hiringCap": 30,
+        "advertising": false,
+        "maxAnalytics": 15,
+        "delay": null
     },
     "gang": {
-        "priority": null,
+        "priority": "money",
         "buying": true,
-        "maxSpend": null,
+        "maxSpend": 500000000,
         "repTarget": null,
         "moneyTarget": null
     },
     "servers": {
-        "buying": true,
-        "maxSpend": null,
-        "toasts": true
+        "buying": false,
+        "maxSpend": 10000000,
+        "toasts": false
     },
     "sleeves": {
         "buying": true,
-        "maxSpend": null,
+        "maxSpend": 50000000,
         "augTypes": {
             "hacking": true,
-            "other": true
+            "other": false
         },
         "crimeSuccessThreshold": null,
-        "instruction": null
+        "priority": "money",
+        "faction": null,
+        "doJobs": false
+    },
+    "hacknet": {
+        "delay": 1000,
+        "buying": true,
+        "cacheThreshold": 0.9
     }
 }

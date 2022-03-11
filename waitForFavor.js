@@ -17,5 +17,9 @@ export async function main(ns) {
         ns.print("Share power: " + ns.getSharePower());
         await ns.sleep(5000);
     } while (favorSoFar + favorGain < neededFavor);
+    ns.kill("share-me.js");
+    ns.kill("warthogs.js");
+    ns.run("orchestrate.js", 1, "stop");
+    ns.run("sendBatches.js");
     ns.toast("Time to install!", "success");
 }

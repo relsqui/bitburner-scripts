@@ -332,12 +332,17 @@ function makeRow(ns, context) {
 }
 
 export async function main(ns) {
+    if (!(ns.corporation.hasUnlockUpgrade("Office API") && ns.corporation.hasUnlockUpgrade("Warehouse API"))) {
+        ns.tprint("Need office/warehouse APIs to use this!");
+        return;
+    }
     ns.disableLog("ALL");
     while (true) {
         const data = [];
         const corp = ns.corporation.getCorporation();
         const maxAnalytics = getSettings(ns).corp.maxAnalytics;
-        if (corp.funds > ns.corporation.getUpgradeLevelCost("Wilson Analytics") &&
+        if (getSettings(ns).corp.advertising && corp.divisions.length > 2  &&
+            corp.funds > ns.corporation.getUpgradeLevelCost("Wilson Analytics") &&
             ((!maxAnalytics) || ns.corporation.getUpgradeLevel("Wilson Analytics") < maxAnalytics)) {
             ns.toast("Upgrading Wilson Analytics");
             ns.corporation.levelUpgrade("Wilson Analytics");
@@ -351,7 +356,10 @@ export async function main(ns) {
             }
             doResearch(ns, context);
             cycleProducts(ns, context);
-            buyAds(ns, context);
+            if (getSettings(ns).corp.advertising && division.cities.length == 6 && ns.corporation.getOffice(division.name, "Aevum").size >= 30 &&
+                (productDivisions.includes(division.type) || ns.corporation.hasResearched(division.name, "Market-TA.II"))) {
+                buyAds(ns, context);
+            }
             for (let city of division.cities) {
                 context.city = city;
                 await hirePeople(ns, context);

@@ -15,7 +15,7 @@ function getThreadRatio(ns, host, target) {
 	if (atMinSec && atMaxMoney) {
 		hackThreads = 1;
 		hackRate = ns.hackAnalyze(target);
-		hackSecChange = ns.hackAnalyzeSecurity(1);
+		hackSecChange = ns.hackAnalyzeSecurity(0.25);
 	}
 
 	let growThreads = 0;
@@ -170,6 +170,6 @@ export async function deployBatchPlan(ns, host, target, opts = {}) {
 
 export async function main(ns) {
 	const [host, target] = ns.args;
-	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: true });
+	const batchPlan = await deployBatchPlan(ns, host, target, { deploy: false });
 	ns.tprint(JSON.stringify(batchPlan, null, 2));
 }

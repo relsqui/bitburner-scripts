@@ -1,16 +1,9 @@
 /** @param {NS} ns **/
 
+import { companies } from './getJobs.js';
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
-function hasAllRootPrograms(ns) {
-	for (let file of ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"]) {
-		if (!ns.fileExists(file, "home")) {
-			return false;
-		}
-	}
-    return true;
-}
 
 function crimeSuccessRate(ns, i, crime) {
     // adapted from https://github.com/danielyxie/bitburner/blob/dev/src/Crime/Crime.ts
@@ -35,8 +28,8 @@ function formatTask(ns, i, t) {
     const task = t || ns.sleeve.getTask(i);
     let taskString = task.task;
     const details = []
-    for (let key of ["crime", "gymStatType", "factionWorkType"]) {
-        if (task[key] && !["", "None"].includes(task[key])) {
+    for (let key of ["crime", "gymStatType", "factionWorkType", "location"]) {
+        if (task[key] && !["", "None"].includes(task[key]) && !task[key].match(/^[0-9]*$/)) {
             details.push(task[key]);
         }
     }
@@ -49,16 +42,36 @@ function formatTask(ns, i, t) {
     return taskString;
 }
 
+const lastIncome = [];
+
+function getIncome(ns, i) {
+    let money = 0;
+    let time = 1;
+    const info = ns.sleeve.getInformation(i);
+    const newIncome = {
+        money: info.earningsForPlayer.workMoneyGain || 0,
+        time: Date.now()/1000,
+        task: formatTask(ns, i),
+    }
+    if (lastIncome[i]) {
+        money = newIncome.money - lastIncome[i].money;
+        time = newIncome.time - lastIncome[i].time;
+    }
+    if ((!lastIncome[i]) || time > 300 || lastIncome[i].task != newIncome.task) {
+        lastIncome[i] = newIncome;
+    }
+    return money/time;
+}
+
 function formatStats(ns, i) {
     const formatted = [i, ns.sleeve.getSleeveAugmentations(i).length];
     const stats = ns.sleeve.getSleeveStats(i);
-    for (let key of ["shock", "sync"]) {
-        formatted.push(ns.nFormat(stats[key], "0.000"));
-    }
+    formatted.push(ns.nFormat(stats.shock, "0.000"));
     for (let key of ["hacking", "strength", "defense", "dexterity", "agility", "charisma"]) {
-        formatted.push(stats[key]);
+        formatted.push(ns.nFormat(stats[key], "0a"));
     }
     formatted.push(formatTask(ns, i));
+    formatted.push(ns.nFormat(getIncome(ns, i), "$0.00a"));
     return formatted;
 }
 
@@ -139,9 +152,36 @@ function studyCS(ns, i) {
     }
 }
 
+function getPriorityTask(ns, i) {
+    switch (getSettings(ns).sleeves.priority) {
+        case "cs":
+            studyCS(ns, i);
+            return true;
+        case "cha":
+            ns.sleeve.travel(i, "Volhaven");
+            ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", "Leadership");
+            return true;
+        case "rep":
+            const myFaction = ns.getPlayer().factions[i];
+            const factionPref = getSettings(ns).sleeves.faction;
+            if (myFaction && (myFaction == factionPref || !factionPref)) {
+                for (let workType of ["Hacking", "Field", "Security"]) {
+                    if (ns.sleeve.setToFactionWork(i, myFaction, workType)) {
+                        return true;
+                    }
+                }
+            }
+        case "money":
+            assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
+            return true;
+        default:
+            return false;
+    }
+}
+
 export async function main(ns) {
     ns.disableLog("ALL");
-    const labels = ["#", "Aug", "Shock", "Sync", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task"];
+    const labels = ["#", "A", "Shock", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task", "$"];
     while (true) {
         ns.clearLog();
         const sleeveCount = ns.sleeve.getNumSleeves();
@@ -152,37 +192,23 @@ export async function main(ns) {
             }
             const s = ns.sleeve.getSleeveStats(i);
             const p = ns.getPlayer();
-            const instruction = getSettings(ns).sleeves.instruction;
-            if (instruction) {
-                switch (instruction) {
-                    case "cs":
-                        studyCS(ns, i);
-                        break;
-                    case "cha":
-                        ns.sleeve.travel(i, "Volhaven");
-                        ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", "Leadership");
-                        break;
-                    case "money":
-                        assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
-                        break;
-                }
+            if (getPriorityTask(ns, i)) {
             } else if (s.shock > 50) {
                 ns.sleeve.setToShockRecovery(i);
             } else if (!ns.gang.inGang()) {
                 assignCrime(ns, i, ["Homicide"]);
             } else if (s.sync < 100) {
                 ns.sleeve.setToSynchronize(i);
-            } else if (!hasAllRootPrograms(ns)) {
-                assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
             } else if (p.hacking < 50) {
                 studyCS(ns, i);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
-            } else if ((s.hacking < 100 && p.hacking < 200) ||
-                (ns.getOwnedAugmentations().includes("The Red Pill") && p.hacking < ns.getServerRequiredHackingLevel("w0r1d_d43m0n"))) {
+            } else if (s.hacking < 100 && p.hacking < 200) {
                 studyCS(ns, i);
+            } else if (getSettings(ns).sleeves.doJobs && ns.getPlayer().jobs[companies[i]]) {
+                ns.sleeve.setToCompanyWork(i, companies[i]);
             } else {
-                assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
+                assignCrime(ns, i, ["Homicide", "Mug"]);
             }
             rows.push(formatStats(ns, i));
         }
