@@ -1,50 +1,63 @@
 {
     "loop": {
-        "upgradeHome": true,
+        "upgradeHome": false,
         "dontJoinFactions": false,
         "joinCities": true,
-        "augPriority": "hack",
-        "minAugsToBuy": null
+        "augPriority": null,
+        "minAugsToBuy": null,
+        "sharing": false
     },
     "batches": {
         "homeReservedRam": 100,
-        "delay": 100
+        "delay": 100,
+        "includeHome": false,
+        "includeHn": false
     },
     "corp": {
-        "expanding": true,
-        "hiring": true,
-        "hiringCap": 30,
-        "advertising": false,
-        "maxAnalytics": 15,
-        "delay": null
+        "expanding": false,
+        "hiring": false,
+        "hiringCap": 150,
+        "minHeadcount": 9,
+        "advertising": true,
+        "maxAnalytics": 100,
+        "delay": 1000,
+        "whStockRate": 0.5
     },
     "gang": {
-        "priority": "money",
+        "priority": null,
         "buying": true,
-        "maxSpend": 500000000,
+        "maxSpend": 1e8,
         "repTarget": null,
-        "moneyTarget": null
+        "moneyTarget": 0
     },
     "servers": {
         "buying": false,
-        "maxSpend": 10000000,
+        "maxSpend": 1e8,
         "toasts": false
     },
     "sleeves": {
-        "buying": true,
-        "maxSpend": 50000000,
+        "priority": null,
+        "buying": false,
+        "maxSpend": 1e8,
         "augTypes": {
-            "hacking": true,
+            "hacking": false,
             "other": false
         },
+        "targetHackLvl": 50,
         "crimeSuccessThreshold": null,
-        "priority": "money",
-        "faction": null,
+        "faction": "Daedalus",
         "doJobs": false
     },
     "hacknet": {
-        "delay": 1000,
+        "delay": 100,
         "buying": true,
-        "cacheThreshold": 0.9
+        "buyingCache": true,
+        "toasts": true,
+        "upgrades": null,
+        "maxSpends": 1000,
+        "cacheThreshold": 0.9,
+        "saveThreshold": 0,
+        "maxProd": null,
+        "minCache": null
     }
 }

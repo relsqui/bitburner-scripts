@@ -46,7 +46,7 @@ export async function solve(ns, input) {
 }
 
 export async function main(ns) {
-  const data = "0187142151";
+  const data = "01144157";
   ns.tprint(data);
   ns.tprint(await solve(ns, data));
 }

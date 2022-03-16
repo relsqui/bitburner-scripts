@@ -6,6 +6,12 @@ export const companies = [
     "KuaiGong International", "Four Sigma", "Blade Industries", "OmniTek Incorporated"
 ];
 
+const lastTitle = {
+    Business: "Chief Executive Officer",
+    Software: "Chief Technology Officer",
+    Security: "Head of Security",
+}
+
 const status = companies.reduce((o, company) => {
     o[company] = "Waiting";
     return o;
@@ -23,16 +29,20 @@ function printStatus(ns) {
     ns.print(makeTable(ns, rows, labels));
 }
 
+function workingAt(ns, company) {
+    const player = ns.getPlayer()
+    return player.isWorking && player.location == company
+}
+
 export async function main(ns) {
-    const title = "Chief Technology Officer";
-    const field = "Software";
-    const delay = 1000;
+    const field = ns.args[0] || "Software";
+    const title = lastTitle[field] || "";
+    const delay = 5000;
+    const doWork = ns.args.includes("work");
     ns.disableLog("ALL");
-    ns.tail();
     while (Object.values(ns.getPlayer().jobs).filter((t) => t === title).length < companies.length) {
         // outermost loop means if we can't even start working for a company we'll try again
         for (let company of companies) {
-            status[company] = "Done";
             while (ns.getPlayer().jobs[company] != title) {
                 for (let c of companies.filter((c) => c !== company)) {
                     // do a round of applications to take advantage of rep from sleeves
@@ -40,15 +50,21 @@ export async function main(ns) {
                         status[company] = "Waiting";
                     }
                 }
-                if (ns.applyToCompany(company, field)) {
-                    status[company] = "Working";
-                    ns.workForCompany(company, false);
-                } else if (!ns.getPlayer().jobs[company]) {
+                if (!(ns.applyToCompany(company, field) || ns.getPlayer().jobs[company])) {
                     status[company] = "Unqualified";
                     break;
                 }
+                if (doWork && !workingAt(ns, company)) {
+                    ns.workForCompany(company, false);
+                }
+                if (workingAt(ns, company)) {
+                    status[company] = "Working";
+                }
                 printStatus(ns);
                 await ns.sleep(delay);
+            }
+            if (ns.getPlayer().jobs[company] == title) {
+                status[company] = "Done";
             }
         }
         printStatus(ns);

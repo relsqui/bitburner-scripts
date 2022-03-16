@@ -64,7 +64,7 @@ async function own(hostname) {
 		allPortOpeners[opener](hostname);
 	}
 	await ns.nuke(hostname);
-	ns.toast(`Rooted ${hostname}.`, "success", 500);
+	// ns.toast(`Rooted ${hostname}.`, "success", 500);
 }
 
 async function backdoor(hostname) {
@@ -133,7 +133,7 @@ export async function main(netScript) {
 	let noPurchaseCues = ["value", "own", "list", "stop", "share", "backdoor"];
 	let cue = ns.args[0] || "list";
 	
-	let hostnames = hosts_by_distance(ns);
+	let hostnames = hosts_by_distance(ns).filter((host) => !host.startsWith("hacknet-node-"));
 	if (rootlessCues.indexOf(cue) == -1) {
 		hostnames = hostnames.filter(ns.hasRootAccess);
 	}

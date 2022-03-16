@@ -3,27 +3,26 @@
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
-function totalMult(augment, keys) {
+const statPrefixes = {
+    hack: /hacking.*/,
+    crime: /crime.*/,
+    combat: /(strength|defense|dexterity|agility).*/,
+    cha: /charisma.*/,
+    c_rep: /company_rep.*/,
+    f_rep: /faction_rep.*/,
+    hacknet: /hacknet.*/,
+    xp: /.*xp.*/,
+    money: /.*(crime|hacking|work)_money.*/,
+}
+
+function totalMult(augment, statRegex) {
     return Object.keys(augment)
-        .filter((k) => {
-            for (let key of keys) {
-                if (k.startsWith(key)) return true;
-            }
-        })
+        .filter((k) => k.match(statRegex))
         .map((k) => augment[k])
         .reduce((sum, mult) => sum * mult, 1);
 }
 
 function getAllAugments(ns, includingNFG=false) {
-    const statPrefixes = {
-        hack: ["hacking"],
-        crime: ["crime"],
-        combat: ["strength", "defense", "dexterity", "agility"],
-        cha: ["charisma"],
-        c_rep: ["company_rep"],
-        f_rep: ["faction_rep"],
-        hacknet: ["hacknet"],
-    }
     const augments = {};
     for (let faction of ns.getPlayer().factions) {
         for (let aug of ns.getAugmentationsFromFaction(faction)) {
@@ -65,6 +64,14 @@ function hasAug(ns, aug) {
     return ns.getOwnedAugmentations(true).includes(aug.name);
 }
 
+function hasPrereqs(ns, aug) {
+    const owned = ns.getOwnedAugmentations();
+    if (!aug.prereqs.reduce((haveAllPrereqs, prereq) => haveAllPrereqs && owned.includes(prereq), true)) {
+        return false;
+    }
+    return true;
+}
+
 function canBuy(ns, aug) {
     if (ns.getServerMoneyAvailable("home") < aug.price) {
         return false;
@@ -75,11 +82,7 @@ function canBuy(ns, aug) {
     if (hasAug(ns, aug)) {
         return false;
     }
-    const owned = ns.getOwnedAugmentations();
-    if (!aug.prereqs.reduce((haveAllPrereqs, prereq) => haveAllPrereqs && owned.includes(prereq), true)) {
-        return false;
-    }
-    return true;
+    return hasPrereqs(ns, aug);
 }
 
 function totalPrice(augs) {
@@ -114,14 +117,14 @@ function makeRows(ns, augments) {
 }
 
 export async function getAugments(ns, purchase=false, print=false) {
-    const labels = ["Name", "?", "$", "Price", "Rep", "Hack", "HNet", "Crime", "Combat", "Cha", "C Rep", "F Rep", "Factions"];
-    const sortKey = getSettings(ns).loop.augPriority || "hack";
+    const labels = ["Name", "?", "$", "Price", "Rep", "Hack", "HNet", "Crim", "Cbat", "Cha", "CRep", "FRep", "Factions"];
+    const sortKey =  (ns.args[0] == "-y" ? null : ns.args[0]) || getSettings(ns).loop.augPriority || "hack";
     let augments = getAllAugments(ns).filter((a) => !hasAug(ns, a));
     augments = augments
-        .filter((a) => a[sortKey] > 1)
+        .filter((a) => a[sortKey] > 1 || a.name == "The Red Pill")
         .sort((a, b) => b[sortKey]/b.price - a[sortKey]/a.price)
         .concat(...augments
-            .filter((a) => a[sortKey] == 1)
+            .filter((a) => a[sortKey] == 1 && a.name != "The Red Pill")
             .sort((a, b) => a.price - b.price)
         );
 
@@ -147,9 +150,9 @@ export async function getAugments(ns, purchase=false, print=false) {
         }
         return augments;
     } else if (augments.length && print) {
-        const numToShow = 12; // or the buyable ones, if that's more
-        const augsToShow = maybeBuy.length > numToShow ? maybeBuy : augments.slice(0, numToShow);
+        const augsToShow = augments.filter((aug) => hasPrereqs(ns, aug));
         const price = ns.nFormat(totalPrice(augments.filter((a) => a.to_buy)), "$0.00a");
+        ns.tprintf(`\nAugments with no missing prereqs, sorted by expected ${sortKey} value:\n\n`);
         ns.tprintf(makeTable(ns, makeRows(ns, augsToShow), labels));
         ns.tprintf(`\nCall this script with -y to buy the augments with a # in the \$ column for ${price}.`);
     }
@@ -157,5 +160,5 @@ export async function getAugments(ns, purchase=false, print=false) {
 }
 
 export async function main(ns) {
-    await getAugments(ns, ns.args[0] == "-y", true);
+    await getAugments(ns, ns.args.includes("-y"), true);
 }

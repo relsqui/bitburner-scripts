@@ -40,14 +40,18 @@ function hasMemory(ns, host) {
 function findHosts(ns) {
 	const purchased = ns.getPurchasedServers();
 	let hosts;
-	// TODO: put home back
 	if (purchased.length > 0 && ns.getServerMaxRam(purchased[0]) == ns.getPurchasedServerMaxRam()) {
 		hosts = [...purchased];
 	} else {
 		hosts = [...hosts_by_distance(ns)].filter(ns.hasRootAccess);
 	}
+	if (getSettings(ns).batches.includeHome) {
+		hosts.unshift("home");
+	}
+	if (!getSettings(ns).batches.includeHn) {
+		hosts = hosts.filter((h) => !h.startsWith("hacknet-node-"));
+	}
 	hosts = hosts
-		.filter((h) => !h.startsWith("hacknet-node-"))
 		.filter((h) => hasMemory(ns, h))
 		.sort((a, b) =>
 			ns.getServerMaxRam(b) - ns.getServerMaxRam(a) ||

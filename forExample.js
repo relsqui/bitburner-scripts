@@ -4,6 +4,16 @@ export async function main(ns) {
     function pprint(o) {
         ns.tprint(JSON.stringify(o, null, 2));
     }
-    // pprint(ns.sleeve.getInformation(0));
-    pprint(ns.sleeve.getTask(0));
+    function shallowPprint(o) {
+        const flat = {};
+        for (let key of Object.keys(o)) {
+            flat[key] = o[key].toString();
+        }
+        pprint(flat);
+    }
+    const elements = document.body.getElementsByTagName('*');
+    // shallowPprint(elements);
+    shallowPprint(elements[0])
+    // pprint(elements[0]);
+    pprint(document.body._reactRootContainer);
 }

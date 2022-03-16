@@ -9,10 +9,17 @@ export async function main(ns) {
 	if (ns.gang.inGang()) {
 		ns.run("runGang.js");
 	}
-	if (ns.getPlayer().hasCorporation && ns.getServerMaxRam("home") > 1024) {
-		ns.run("runCorp.js");
+	if (ns.getServerMaxRam("home") > 1024) {
+		if (ns.getPlayer().hasCorporation) {
+			ns.run("runCorp.js");
+		} else {
+			ns.run("bootCorp.js");
+		}
+	} else if (ns.getPlayer().hasCorporation || ns.getServerMoneyAvailable("home") > 150e9) {
+		ns.tprint("Not enough RAM to run corp.");
 	}
 	ns.run("loop.js");
+	ns.run("backdoor.js");
 	ns.run("sendBatches.js");
 	ns.universityCourse("Rothman University", "Study Computer Science", false);
 	while (!ns.getPlayer().tor && !ns.purchaseTor()) {
@@ -31,7 +38,7 @@ export async function main(ns) {
 		}
 		ns.exit();
 	}
-	if (ns.getPlayer().hacking < 2500 && ns.getServerMoneyAvailable("home") > 200000 && ns.travelToCity("Volhaven")) {
+	if (ns.getPlayer().hacking < 2500 && ns.travelToCity("Volhaven")) {
 		ns.universityCourse("ZB Institute of Technology", "Algorithms", false);
 	}
 	while (ns.getFactionRep("Daedalus") == 0 && !ns.checkFactionInvitations().includes("Daedalus")) {
@@ -43,8 +50,10 @@ export async function main(ns) {
 		ns.run("waitForFavor.js");
 		ns.kill("sendBatches.js", "home");
 		ns.kill("loop.js", "home");
+		await ns.sleep(1000);
 		ns.run("orchestrate.js", 1, "stop");
 		ns.run("warthogs.js", 1, "stop");
+		await ns.sleep(1000);
 		ns.run("orchestrate.js", 1, "share");
 		ns.run("loop.js");
 		ns.run("warthogs.js", 1, "share");

@@ -1,31 +1,9 @@
 /** @param {NS} ns **/
 
 import { getAugments } from './buyAugments.js';
-import goto from "goto.js";
 import { hosts_by_distance } from 'breadth-first.js';
 import { getSettings } from './settings.js';
 
-async function backdoor(ns, hostname) {
-	const prevServer = ns.getCurrentServer();
-	await goto(ns, hostname);
-	await ns.sleep(10);
-
-	await ns.installBackdoor(hostname);
-	ns.toast(`Backdoored ${hostname}`);
-	await goto(ns, prevServer);
-}
-
-async function checkBackdoors(ns) {
-	const servers = ["CSEC", "avmnite-02h", "I.I.I.I", "run4theh111z", "powerhouse-fitness"];
-	for (let server of servers) {
-		if (ns.getServer(server).backdoorInstalled ||
-			ns.getPlayer().hacking < ns.getServerRequiredHackingLevel(server) ||
-			!ns.hasRootAccess(server)) {
-			continue;
-		}
-		await backdoor(ns, server);
-	}
-}
 
 function joinAllFactions(ns) {
 	// if (getSettings(ns).loop.dontJoinFactions) {
@@ -53,12 +31,11 @@ export async function main(ns) {
 	while (missing.length > 0) {
 		ns.clearLog();
 		ns.run("orchestrate.js", 1, "own");
-		missing = missing.filter(({ server, hackLevel }) => !ns.hasRootAccess(server));
+		missing = missing.filter(({ server }) => !ns.hasRootAccess(server));
 		for (let { server, hackLevel } of missing) {
 			ns.print(`  ${server} (${hackLevel})`);
 		}
 		ns.print(`\n${missing.length} servers remaining.`);
-		await checkBackdoors(ns);
 		joinAllFactions(ns);
 		await ns.sleep(1000);
 	}
@@ -68,7 +45,6 @@ export async function main(ns) {
 	let count = 0;
 	while (true) {
 		ns.clearLog();
-		await checkBackdoors(ns);
 		joinAllFactions(ns);
 		if (getSettings(ns).loop.upgradeHome) {
 			ns.upgradeHomeRam();
@@ -79,7 +55,6 @@ export async function main(ns) {
 		const minAugs = getSettings(ns).loop.minAugsToBuy;
 		if (minAugs && toBuy.length > minAugs) {
 			ns.run("shutdown.js", 1, 60);
-			ns.exit();
 		}
 		await ns.sleep(1000);
 	}

@@ -29,7 +29,7 @@ function formatTask(ns, i, t) {
     let taskString = task.task;
     const details = []
     for (let key of ["crime", "gymStatType", "factionWorkType", "location"]) {
-        if (task[key] && !["", "None"].includes(task[key]) && !task[key].match(/^[0-9]*$/)) {
+        if (task[key] && !["", "None"].includes(task[key]) && !task[key].match(/^[0-9.]*$/)) {
             details.push(task[key]);
         }
     }
@@ -51,13 +51,14 @@ function getIncome(ns, i) {
     const newIncome = {
         money: info.earningsForPlayer.workMoneyGain || 0,
         time: Date.now()/1000,
-        task: formatTask(ns, i),
+        // strip crime success percentages so they don't count as different tasks
+        task: formatTask(ns, i).replace(/[0-9]*%/, ""),
     }
     if (lastIncome[i]) {
         money = newIncome.money - lastIncome[i].money;
         time = newIncome.time - lastIncome[i].time;
     }
-    if ((!lastIncome[i]) || time > 300 || lastIncome[i].task != newIncome.task) {
+    if ((!lastIncome[i]) || lastIncome[i].task != newIncome.task) {
         lastIncome[i] = newIncome;
     }
     return money/time;
@@ -145,11 +146,18 @@ function studyCS(ns, i) {
         ns.sleeve.travel(i, "Volhaven");
         course = "Algorithms";
     }
+    let uni;
     if (ns.sleeve.getInformation(i).city == "Volhaven") {
-        ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", course);
+        uni = "ZB Institute of Technology";
     } else {
-        ns.sleeve.setToUniversityCourse(i, "Rothman University", course);
+        ns.sleeve.travel(i, "Sector-12");
+        uni = "Rothman University";
     }
+    const task = ns.sleeve.getTask(i);
+    if (task.task == "Class" && task.location == uni) {
+        return;
+    }
+    ns.sleeve.setToUniversityCourse(i, uni, course);
 }
 
 function getPriorityTask(ns, i) {
@@ -162,15 +170,21 @@ function getPriorityTask(ns, i) {
             ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", "Leadership");
             return true;
         case "rep":
-            const myFaction = ns.getPlayer().factions[i];
+            let factions = ns.getPlayer().factions;
+            if (factions.includes("Daedalus")) {
+                factions = factions.filter((f) => f != "Daedalus");
+                factions.unshift("Daedalus");
+            }
+            const myFaction = factions[i];
             const factionPref = getSettings(ns).sleeves.faction;
             if (myFaction && (myFaction == factionPref || !factionPref)) {
-                for (let workType of ["Hacking", "Field", "Security"]) {
+                for (let workType of ["Security", "Field", "Hacking"]) {
                     if (ns.sleeve.setToFactionWork(i, myFaction, workType)) {
                         return true;
                     }
                 }
             }
+            return false;
         case "money":
             assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
             return true;
@@ -182,6 +196,12 @@ function getPriorityTask(ns, i) {
 export async function main(ns) {
     ns.disableLog("ALL");
     const labels = ["#", "A", "Shock", "Hack", "Str", "Def", "Dex", "Agi", "Cha", "Task", "$"];
+    const sleeveCount = ns.sleeve.getNumSleeves();
+    for (let i = 0; i < sleeveCount; i++) {
+        // clear tasks on startup so we don't get overlapping
+        // factions, jobs, etc.
+        ns.sleeve.setToShockRecovery(i);
+    }
     while (true) {
         ns.clearLog();
         const sleeveCount = ns.sleeve.getNumSleeves();
@@ -193,22 +213,20 @@ export async function main(ns) {
             const s = ns.sleeve.getSleeveStats(i);
             const p = ns.getPlayer();
             if (getPriorityTask(ns, i)) {
-            } else if (s.shock > 50) {
-                ns.sleeve.setToShockRecovery(i);
             } else if (!ns.gang.inGang()) {
                 assignCrime(ns, i, ["Homicide"]);
+            } else if (s.shock > 50) {
+                ns.sleeve.setToShockRecovery(i);
             } else if (s.sync < 100) {
                 ns.sleeve.setToSynchronize(i);
-            } else if (p.hacking < 50) {
+            } else if (p.hacking < (getSettings(ns).sleeves.targetHackLvl || 50)) {
                 studyCS(ns, i);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");
-            } else if (s.hacking < 100 && p.hacking < 200) {
-                studyCS(ns, i);
             } else if (getSettings(ns).sleeves.doJobs && ns.getPlayer().jobs[companies[i]]) {
                 ns.sleeve.setToCompanyWork(i, companies[i]);
             } else {
-                assignCrime(ns, i, ["Homicide", "Mug"]);
+                assignCrime(ns, i, ["Heist", "Homicide", "Mug"]);
             }
             rows.push(formatStats(ns, i));
         }

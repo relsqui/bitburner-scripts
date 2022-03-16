@@ -1,7 +1,7 @@
 import { hosts_by_distance } from "breadth-first.js";
 import { call } from "apiCall.js";
 
-const delay = 5 * 60 * 1000;
+const delay = 1000;
 
 async function attemptContract(ns, file, host, loop) {
 	const indent = loop ? "" : "  ";
@@ -13,7 +13,7 @@ async function attemptContract(ns, file, host, loop) {
 	// 	return;
 	// }
 	const result = (await call(ns, "contract", {type, data}));
-	if (result.response && result.response.solution) {
+	if (result.response && result.response.solution != null) {
 		const outcome = ns.codingcontract.attempt(result.response.solution, file, host, {returnReward: true});
 		if (outcome) {
 			ns.toast("Contract complete!", "success");

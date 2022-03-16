@@ -3,10 +3,24 @@ import { makeWeightedVolWh } from './optimizeWarehouse.js';
 import { getSettings } from './settings.js';
 import { makeTable } from './table.js';
 
-const productDivisions = [
-    "Tobacco", "Software", "Healthcare", "Food", "Pharmaceutical", "Computer", "Robotics", "RealEstate"
-];
+const productDivisions = ["Tobacco", "Software", "Healthcare", "Food", "Pharmaceutical", "Computer", "Robotics", "RealEstate"];
 const materials = ["Water", "Energy", "Food", "Plants", "Hardware", "Robots", "AI Cores", "Real Estate"];
+const materialInputs = {
+    Energy: ["Hardware", "Metal"],
+    Utilities: ["Hardware", "Metal"],
+    Agriculture: ["Water", "Energy"],
+    Fishing: ["Energy"],
+    Mining: ["Energy"],
+    Food: ["Food", "Water", "Energy"],
+    Tobacco: ["Plants", "Water"],
+    Chemical: ["Plants", "Energy", "Water"],
+    Pharmaceutical: ["Chemicals", "Energy", "Water"],
+    Computer: ["Metal", "Energy"],
+    Robotics: ["Hardware", "Energy"],
+    Software: ["Hardware", "Energy"],
+    Healthcare: ["Robots", "AICores", "Energy", "Water"],
+    RealEstate: ["Metal", "Energy", "Water", "Hardware"],
+}
 const materialOutputs = {
     Energy: ["Energy"],
     Utilities: ["Water"],
@@ -56,14 +70,20 @@ function sellMaterials(ns, {division, city}) {
 }
 
 function stockWarehouse(ns, { division, city }) {
-    const targetInv = makeWeightedVolWh(division.type, ns.corporation.getWarehouse(division.name, city).size/2);
+    const stockRate = getSettings(ns).corp.whStockRate || 0.5;
+    const targetInv = makeWeightedVolWh(division.type, ns.corporation.getWarehouse(division.name, city).size * stockRate);
 
     for (let key of Object.keys(targetInv)) {
+        if (materialInputs[division.type].includes(key)) {
+            // we'd just be fighting smart supply
+            // TODO: move this logic into the warehouse optimizer
+            // so we can take it into account when balancing
+            continue;
+        }
         const material = ns.corporation.getMaterial(division.name, city, key);
         // sell price is over 10 seconds
         const dQty = (targetInv[key] - material.qty) / 10;
         if (dQty < 0) {
-            // ns.tprint(`Would sell ${-dQty} ${key} from ${division.name}/${city}`);
             ns.corporation.buyMaterial(division.name, city, key, 0, "MP");
             ns.corporation.sellMaterial(division.name, city, key, -1 * dQty, "MP");
         } else {
@@ -171,16 +191,22 @@ function doResearch(ns, { division }) {
 const priceGuesses = {};
 
 function guessPrice(product) {
+    const [lastGuess, lastGuessTime] = priceGuesses[product.name] || [1, 0];
+    if (Date.now() - lastGuessTime < 15000) {
+        // we need at least a market cycle to know if a guess worked
+        return `MP*${lastGuess}`;
+    }
+
     const priceSplit = (product.sCost || "").split("*");
     const currentMult = priceSplit.length > 1 ? Number(priceSplit[1]) : 1000;
     const closeEnough = 5;
-    priceGuesses[product.name] = priceGuesses[product.name] || 1;
     const [storedQty, prodQty, sellQty] = product.cityData["Aevum"];
+
     let newMult = currentMult;
     if (storedQty > 0 && prodQty > sellQty) {
-        newMult = Math.floor((currentMult + priceGuesses[product.name]) / 2)
-    } else if (prodQty + closeEnough < sellQty && currentMult > priceGuesses[product.name]) {
-        priceGuesses[product.name] = currentMult;
+        newMult = Math.floor((currentMult + lastGuess) / 2)
+    } else if (prodQty + closeEnough < sellQty && currentMult > lastGuess) {
+        priceGuesses[product.name] = [currentMult, Date.now()];
         newMult *= 2;
     }
     return `MP*${newMult}`;
@@ -225,7 +251,7 @@ function cycleProducts(ns, { division }) {
         }
     }
 
-    if (finishedProducts.length == maxProducts) {
+    if (finishedProducts.length == maxProducts && ns.corporation.getCorporation().funds > 0) {
         const oldProduct = products.shift();
         ns.toast(`Discontinuing ${oldProduct.name}.`);
         ns.corporation.discontinueProduct(division.name, oldProduct.name);
@@ -233,6 +259,9 @@ function cycleProducts(ns, { division }) {
 
     if (inDevelopment.length == 0 && products.length < maxProducts) {
         const investment = Math.ceil(ns.corporation.getCorporation().funds / 100);
+        if (investment < 0) {
+            return;
+        }
         const allNames = products.map((p) => p.name);
         let name;
         do {
@@ -272,7 +301,7 @@ function getHappyStats(ns, context, office) {
 }
 
 async function hirePeople(ns, context) {
-    if (!context.division.cities.includes("Aevum")) {
+    if (context.division.cities.length < 6) {
         return;
     }
     const happyThreshold = 99.95;
@@ -284,13 +313,14 @@ async function hirePeople(ns, context) {
     // if no hiring cap is set, set it high enough that we can hire
     const hiringCap = getSettings(ns).corp.hiringCap || office.size + headCount;
 
+    const belowMinHeadcount = office.size < (getSettings(ns).corp.minHeadcount || 9);
     if (getSettings(ns).corp.hiring && office.employees.length >= office.size && office.size < hiringCap &&
-        (productDivisions.includes(division.type) || ns.corporation.hasResearched(division.name, "Market-TA.II"))) {
+        (productDivisions.includes(division.type) || ns.corporation.hasResearched(division.name, "Market-TA.II") || belowMinHeadcount)) {
         const upgradeCost = ns.corporation.getOfficeSizeUpgradeCost(division.name, city, headCount);
         const employeesAreHappy = Math.min(...getHappyStats(ns, context, office)) >= happyThreshold;
         const aevumUpgradesFirst = (!productDivisions.includes(division.type)) || city == "Aevum" ||
             office.size + 60 < ns.corporation.getOffice(division.name, "Aevum").size;
-        if (employeesAreHappy && aevumUpgradesFirst && ns.corporation.getCorporation().funds > upgradeCost) {
+        if (((employeesAreHappy && aevumUpgradesFirst) || belowMinHeadcount) && ns.corporation.getCorporation().funds > upgradeCost) {
             ns.corporation.upgradeOfficeSize(division.name, city, headCount);
             office = ns.corporation.getOffice(division.name, city);
         } else {
@@ -332,6 +362,9 @@ function makeRow(ns, context) {
 }
 
 export async function main(ns) {
+    if (!ns.corporation.hasUnlockUpgrade("Smart Supply")) {
+        ns.corporation.unlockUpgrade("Smart Supply");
+    }
     if (!(ns.corporation.hasUnlockUpgrade("Office API") && ns.corporation.hasUnlockUpgrade("Warehouse API"))) {
         ns.tprint("Need office/warehouse APIs to use this!");
         return;
@@ -356,7 +389,8 @@ export async function main(ns) {
             }
             doResearch(ns, context);
             cycleProducts(ns, context);
-            if (getSettings(ns).corp.advertising && division.cities.length == 6 && ns.corporation.getOffice(division.name, "Aevum").size >= 30 &&
+            if (getSettings(ns).corp.advertising && division.cities.length == 6 &&
+                ns.corporation.getOffice(division.name, "Aevum").size >= (getSettings(ns).corp.minHeadcount || 30) &&
                 (productDivisions.includes(division.type) || ns.corporation.hasResearched(division.name, "Market-TA.II"))) {
                 buyAds(ns, context);
             }

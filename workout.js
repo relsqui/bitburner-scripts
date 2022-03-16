@@ -2,7 +2,7 @@
 export async function main(ns) {
     ns.disableLog("sleep");
     const threshold = ns.args[0];
-    const delay = 3000;
+    const delay = 10000;
     const stats = ["strength", "defense", "dexterity", "agility"];
     stats.sort((a, b) => ns.getPlayer()[a] - ns.getPlayer()[b]);
     for (let stat of stats) {
@@ -10,6 +10,7 @@ export async function main(ns) {
         if (threshold && prevStat >= threshold) {
             continue;
         }
+        ns.travelToCity("Sector-12");
         ns.gymWorkout("powerhouse gym", stat, false);
         let newStat = prevStat;
         do {
