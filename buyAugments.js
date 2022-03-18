@@ -15,10 +15,10 @@ const statPrefixes = {
     money: /.*(crime|hacking|work)_money.*/,
 }
 
-function totalMult(augment, statRegex) {
+function totalMult(augment, statRegex, inverse = false) {
     return Object.keys(augment)
         .filter((k) => k.match(statRegex))
-        .map((k) => augment[k])
+        .map((k) => inverse ? 1/augment[k] : augment[k])
         .reduce((sum, mult) => sum * mult, 1);
 }
 
@@ -42,7 +42,7 @@ function getAllAugments(ns, includingNFG=false) {
                     ... ns.getAugmentationStats(aug)
                 };
                 for (let [key, prefixes] of Object.entries(statPrefixes)) {
-                    augments[aug][key] = totalMult(augments[aug], prefixes);
+                    augments[aug][key] = totalMult(augments[aug], prefixes, key == "hacknet");
                 }
             }
         }

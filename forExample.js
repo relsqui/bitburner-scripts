@@ -11,9 +11,10 @@ export async function main(ns) {
         }
         pprint(flat);
     }
-    const elements = document.body.getElementsByTagName('*');
-    // shallowPprint(elements);
-    shallowPprint(elements[0])
-    // pprint(elements[0]);
-    pprint(document.body._reactRootContainer);
+
+    // const elements = document.body.getElementsByTagName('*');
+    // shallowPprint(elements[0])
+    // pprint(document.body._reactRootContainer);
+
+    ns.tprint(ns.ls("home", "a"));
 }

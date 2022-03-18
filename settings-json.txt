@@ -3,7 +3,7 @@
         "upgradeHome": false,
         "dontJoinFactions": false,
         "joinCities": true,
-        "augPriority": null,
+        "augPriority": "hacknet",
         "minAugsToBuy": null,
         "sharing": false
     },
@@ -26,7 +26,7 @@
     "gang": {
         "priority": null,
         "buying": true,
-        "maxSpend": 1e8,
+        "maxSpend": 1e10,
         "repTarget": null,
         "moneyTarget": 0
     },
@@ -37,8 +37,8 @@
     },
     "sleeves": {
         "priority": null,
-        "buying": false,
-        "maxSpend": 1e8,
+        "buying": true,
+        "maxSpend": 1e10,
         "augTypes": {
             "hacking": false,
             "other": false
@@ -56,7 +56,7 @@
         "upgrades": null,
         "maxSpends": 1000,
         "cacheThreshold": 0.9,
-        "saveThreshold": 0,
+        "saveThreshold": 0.85,
         "maxProd": null,
         "minCache": null
     }
