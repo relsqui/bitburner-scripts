@@ -12,12 +12,12 @@ function crimeSuccessRate(ns, i, crime) {
     // defined in Constants.ts, afaict I can't get at it from code
     const maxSkillLevel = 975;
     let chance =
-      crimeStats.hacking_success_weight * stats.hacking +
-      crimeStats.strength_success_weight * stats.strength +
-      crimeStats.defense_success_weight * stats.defense +
-      crimeStats.dexterity_success_weight * stats.dexterity +
-      crimeStats.agility_success_weight * stats.agility +
-      crimeStats.charisma_success_weight * stats.charisma;
+        crimeStats.hacking_success_weight * stats.hacking +
+        crimeStats.strength_success_weight * stats.strength +
+        crimeStats.defense_success_weight * stats.defense +
+        crimeStats.dexterity_success_weight * stats.dexterity +
+        crimeStats.agility_success_weight * stats.agility +
+        crimeStats.charisma_success_weight * stats.charisma;
     chance /= maxSkillLevel;
     chance /= crimeStats.difficulty;
     chance *= ns.sleeve.getInformation(i).mult.crimeSuccess;
@@ -50,7 +50,7 @@ function getIncome(ns, i) {
     const info = ns.sleeve.getInformation(i);
     const newIncome = {
         money: info.earningsForPlayer.workMoneyGain || 0,
-        time: Date.now()/1000,
+        time: Date.now() / 1000,
         // strip crime success percentages so they don't count as different tasks
         task: formatTask(ns, i).replace(/[0-9]*%/, ""),
     }
@@ -61,7 +61,7 @@ function getIncome(ns, i) {
     if ((!lastIncome[i]) || lastIncome[i].task != newIncome.task) {
         lastIncome[i] = newIncome;
     }
-    return money/time;
+    return money / time;
 }
 
 function formatStats(ns, i) {
@@ -117,7 +117,7 @@ function hasHackBuffs(aug) {
 function buyAnAugment(ns, i) {
     const augPairs = ns.sleeve.getSleevePurchasableAugs(i);
     let augments = [];
-    for (let {cost, name} of augPairs) {
+    for (let { cost, name } of augPairs) {
         augments.push({
             name,
             cost,
@@ -147,10 +147,13 @@ function studyCS(ns, i) {
         course = "Algorithms";
     }
     let uni;
-    if (ns.sleeve.getInformation(i).city == "Volhaven") {
+    const sleeveLocation = ns.sleeve.getInformation(i).city;
+    if (sleeveLocation == "Volhaven") {
         uni = "ZB Institute of Technology";
     } else {
-        ns.sleeve.travel(i, "Sector-12");
+        if (sleeveLocation != "Sector-12") {
+            ns.sleeve.travel(i, "Sector-12");
+        }
         uni = "Rothman University";
     }
     const task = ns.sleeve.getTask(i);
@@ -212,6 +215,7 @@ export async function main(ns) {
             }
             const s = ns.sleeve.getSleeveStats(i);
             const p = ns.getPlayer();
+            const targetHack = getSettings(ns).sleeves.targetHackLvl;
             if (getPriorityTask(ns, i)) {
             } else if (!ns.gang.inGang()) {
                 assignCrime(ns, i, ["Homicide"]);
@@ -219,7 +223,7 @@ export async function main(ns) {
                 ns.sleeve.setToShockRecovery(i);
             } else if (s.sync < 100) {
                 ns.sleeve.setToSynchronize(i);
-            } else if (p.hacking < (getSettings(ns).sleeves.targetHackLvl || 50)) {
+            } else if (target.hack && p.hacking < target.hack) {
                 studyCS(ns, i);
             } else if (i == 0 && ns.getFactionRep("Daedalus") > 0 && !ns.getOwnedAugmentations(true).includes("The Red Pill")) {
                 ns.sleeve.setToFactionWork(i, "Daedalus", "Hacking Contracts");

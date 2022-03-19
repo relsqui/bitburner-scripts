@@ -42,7 +42,6 @@ export async function main(ns) {
 	if (anyWereMissing) {
 		ns.tprint("All servers owned.");
 	}
-	let count = 0;
 	while (true) {
 		ns.clearLog();
 		joinAllFactions(ns);
@@ -51,9 +50,9 @@ export async function main(ns) {
 		}
 		const augments = await getAugments(ns);
 		const toBuy = augments.filter((augment) => augment.to_buy);
-		ns.print(`${augments.length} augments available, ${toBuy.length} to purchase at once. (${count++})`);
+		ns.print(`${augments.length} augments available, ${toBuy.length} to purchase at once.`);
 		const minAugs = getSettings(ns).loop.minAugsToBuy;
-		if (minAugs && toBuy.length > minAugs) {
+		if (minAugs && toBuy.length >= minAugs) {
 			ns.run("shutdown.js", 1, 60);
 		}
 		await ns.sleep(1000);

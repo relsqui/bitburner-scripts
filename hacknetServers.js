@@ -6,7 +6,7 @@ import { makeMeter, makeTable } from './table.js';
 
 function getLevelOption(ns, i, s, mult, oldProd) {
     const price = ns.hacknet.getLevelUpgradeCost(i, 1);
-    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level + 1, s.ram, s.ram, s.cores, mult);
+    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level + 1, 0, s.ram, s.cores, mult);
     const dProd = newProd - oldProd;
     const fn = (ns, i) => ns.hacknet.upgradeLevel(i, 1);
     return { i, type: "level", price, dProd, fn, msg: `hn-${i} is now level ${s.level + 1}` };
@@ -14,7 +14,7 @@ function getLevelOption(ns, i, s, mult, oldProd) {
 
 function getRamOption(ns, i, s, mult, oldProd) {
     const price = ns.hacknet.getRamUpgradeCost(i, 1);
-    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level, s.ram * 2, s.ram * 2, s.cores, mult);
+    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level, 0, s.ram * 2, s.cores, mult);
     const dProd = newProd - oldProd;
     const fn = (ns, i) => ns.hacknet.upgradeRam(i, 1);
     return { i, type: "ram", price, dProd, fn, msg: `hn-${i} now has ${ns.nFormat(s.ram * 2000000000, "0b")} ram` };
@@ -22,7 +22,7 @@ function getRamOption(ns, i, s, mult, oldProd) {
 
 function getCoreOption(ns, i, s, mult, oldProd) {
     const price = ns.hacknet.getCoreUpgradeCost(i, 1);
-    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level, s.ram, s.ram, s.cores + 1, mult);
+    const newProd = ns.formulas.hacknetServers.hashGainRate(s.level, 0, s.ram, s.cores + 1, mult);
     const dProd = newProd - oldProd;
     const fn = (ns, i) => ns.hacknet.upgradeCore(i, 1);
     return { i, type: "core", price, dProd, fn, msg: `hn-${i} now has ${s.cores + 1} cores` };
@@ -42,7 +42,7 @@ function getUpgradeOptions(ns) {
         for (let getOption of [getLevelOption, getRamOption, getCoreOption, getCacheOption]) {
             // I'm not sure this is right, but it's at least
             // wrong the same way as the option functions
-            const oldProd = ns.formulas.hacknetServers.hashGainRate(s.level + 1, s.ram, s.ram, s.cores, mult);
+            const oldProd = ns.formulas.hacknetServers.hashGainRate(s.level, 0, s.ram, s.cores, mult);
             options.push(getOption(ns, i, s, mult, oldProd));
         }
     }
@@ -75,10 +75,11 @@ function atMinCache(ns) {
     return ns.hacknet.hashCapacity() > minCache;
 }
 
-function upgradeServers(ns) {
+
+function upgradeServers(ns, frozen) {
     const buying = getSettings(ns).hacknet.buying && !atMaxProd(ns);
     const buyingCache = getSettings(ns).hacknet.buyingCache || !atMinCache(ns);
-    if (!(buying || buyingCache)) {
+    if (frozen || !(buying || buyingCache)) {
         return;
     }
 
@@ -91,7 +92,20 @@ function upgradeServers(ns) {
     let threshold = getSettings(ns).hacknet.cacheThreshold;
     threshold = threshold == null ? 0.9 : threshold;
     let options = getUpgradeOptions(ns)
-        .sort((a, b) => b.dProd / b.price - a.dProd / a.price);
+        .filter((o) => o.price < ns.getServerMoneyAvailable("home"))
+        .sort((a, b) => (b.dProd / b.price) - (a.dProd / a.price));
+
+    if (options.length < 3) {
+        // don't just take the first one you can afford
+        return;
+    }
+
+    const avgDProd = options.reduce((sum, o) => sum + o.dProd, 0)/options.length;
+    const evBuy = avgDProd / ns.hacknet.getPurchaseNodeCost();
+    if (evBuy > options[0].dProd / options[0].price) {
+        // save up for a new one instead
+        return;
+    }
 
     if (ns.hacknet.numHashes() > ns.hacknet.hashCapacity() * threshold || !atMinCache(ns)) {
         options = options.filter((upgrade) => upgrade.type == "cache");
@@ -99,7 +113,8 @@ function upgradeServers(ns) {
     } else if (buying) {
         options = options.filter((upgrade) => upgrade.type != "cache");
     } else {
-        options = [];
+        // not buying and don't need cache
+        return;
     }
 
     for (let upgrade of options) {
@@ -122,16 +137,18 @@ function getUpgradePriorities(ns) {
         });
 }
 
-function spendHashes(ns) {
-    const threshold = getSettings(ns).hacknet.saveThreshold || 0;
+function spendHashes(ns, frozen) {
+    const threshold = frozen ? 0 : getSettings(ns).hacknet.saveThreshold || 0;
     const maxSpends = getSettings(ns).hacknet.maxSpends || 100;
-    for (let upgrade of getUpgradePriorities(ns)) {
-        const cost = ns.hacknet.hashCost(upgrade);
-        for (let i = 0; i < maxSpends; i++) {
-            if (ns.hacknet.spendHashes(upgrade)) {
-                ns.toast(`Bought '${upgrade}' (#${ns.nFormat(cost, "0.00a")})`);
-            } else {
-                break;
+    if (!frozen) {
+        for (let upgrade of getUpgradePriorities(ns)) {
+            const cost = ns.hacknet.hashCost(upgrade);
+            for (let i = 0; i < maxSpends; i++) {
+                if (ns.hacknet.spendHashes(upgrade)) {
+                    ns.toast(`Bought '${upgrade}' (#${ns.nFormat(cost, "0.00a")})`);
+                } else {
+                    break;
+                }
             }
         }
     }
@@ -152,16 +169,20 @@ function makeRow(ns, i) {
     ];
 }
 
-function printStatus(ns) {
+function sumProduction(ns) {
+    let totalProduction = 0;
+    for (let i = 0; i < ns.hacknet.numNodes(); i++) {
+        totalProduction += ns.hacknet.getNodeStats(i).production;
+    }
+    return totalProduction;
+}
+
+function printStatus(ns, frozen) {
     ns.clearLog();
 
     const labels = ["", "#/s", "Lvl", "RAM", "Co", "Ca"];
-    const rows = [];
-    let totalProduction = 0;
-    for (let i = 0; i < ns.hacknet.numNodes(); i++) {
-        rows.push(makeRow(ns, i));
-        totalProduction += ns.hacknet.getNodeStats(i).production;
-    }
+    const rows = [...Array(ns.hacknet.numNodes()).keys()].map((i) => makeRow(ns, i));
+    const totalProduction = sumProduction(ns);
     const nodeTable = makeTable(ns, rows, labels);
 
     const meterLength = nodeTable.indexOf("\n") - 3;
@@ -175,26 +196,53 @@ function printStatus(ns) {
     const prod = ns.nFormat(totalProduction, "0.00a");
     const cashProd = ns.nFormat(1000000 * totalProduction / 4, "$0.00a");
 
-    const upgradeForecast = prod == 0 ? [] : getUpgradePriorities(ns).map((upgrade) => {
+    const upgradeForecast = totalProduction == 0 ? [] : getUpgradePriorities(ns).map((upgrade) => {
         const name = upgrade.replace(/.* for /, "");
         const cost = ns.hacknet.hashCost(upgrade);
-        const eta = ns.nFormat((cost - currHashes)/prod, "00:00").replace(/0*:/, "");
-        return `  Next ${name}: #${ns.nFormat(cost, "0.00a")} (${eta})`;
+        const eta = ns.nFormat((cost - currHashes)/totalProduction, "00:00").replace(/0*:/, "");
+        return `  Next ${name}: #${ns.nFormat(cost, "0.00a")} (${eta})\n`;
     });
 
+    if (frozen) {
+        // TODO: find a way to center this
+        ns.print(" -- Frozen --");
+    }
     ns.print(` [${meter}]`);
     ns.print(`  #${currString}/${capString} (${hashesInMoney}) + #${prod}/s (${cashProd})\n`);
-    ns.print(upgradeForecast.join("\n") + "\n");
+    ns.print(upgradeForecast.join(""));
     ns.print(nodeTable);
     ns.print("");
 }
 
+function shouldFreeze(ns, started) {
+    if (getSettings(ns).hacknet.frozen) {
+        return true;
+    }
+    if (Date.now() - started < 60000) {
+        return false;
+    }
+    if (!getSettings(ns).hacknet.freezeForAugs) {
+        return false;
+    }
+    const minAugs = getSettings(ns).loop.minAugsToBuy;
+    const freezeThreshold = getSettings(ns).hacknet.freezeThreshold;
+    const production = sumProduction(ns);
+    if (!(minAugs && freezeThreshold && production)) {
+        return false;
+    }
+    const upgradeTimes = getUpgradePriorities(ns)
+        .map((upgrade) => ns.hacknet.hashCost(upgrade)/sumProduction(ns));
+    return Math.min(...upgradeTimes) > freezeThreshold;
+}
+
 export async function main(ns) {
     ns.disableLog("ALL");
+    const started = Date.now();
     while (true) {
-        upgradeServers(ns);
-        spendHashes(ns);
-        printStatus(ns);
+        const frozen = shouldFreeze(ns, started);
+        upgradeServers(ns, frozen);
+        spendHashes(ns, frozen);
+        printStatus(ns, frozen);
         await ns.sleep(getSettings(ns).hacknet.delay || 1000);
     }
 }

@@ -38,9 +38,6 @@ export async function main(ns) {
 		}
 		ns.exit();
 	}
-	if (ns.getPlayer().hacking < 2500 && ns.travelToCity("Volhaven")) {
-		ns.universityCourse("ZB Institute of Technology", "Algorithms", false);
-	}
 	while (ns.getFactionRep("Daedalus") == 0 && !ns.checkFactionInvitations().includes("Daedalus")) {
 		await ns.sleep(5000);
 	}

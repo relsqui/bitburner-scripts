@@ -16,5 +16,11 @@ export async function main(ns) {
     // shallowPprint(elements[0])
     // pprint(document.body._reactRootContainer);
 
-    ns.tprint(ns.ls("home", "a"));
+
+    function gainRate(level, ram, cores, mult) {
+        const rate = ns.formulas.hacknetServers.hashGainRate(level, 0, ram, cores, mult);
+        return `level ${level}, ram ${ram}, cores ${cores} = ${rate}`;
+    }
+
+    ns.tprint(gainRate(113, 2048, 23, 2));
 }

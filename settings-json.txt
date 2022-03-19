@@ -1,10 +1,10 @@
 {
     "loop": {
-        "upgradeHome": false,
+        "upgradeHome": true,
         "dontJoinFactions": false,
         "joinCities": true,
-        "augPriority": "hacknet",
-        "minAugsToBuy": null,
+        "augPriority": null,
+        "minAugsToBuy": 4,
         "sharing": false
     },
     "batches": {
@@ -14,14 +14,14 @@
         "includeHn": false
     },
     "corp": {
-        "expanding": false,
-        "hiring": false,
-        "hiringCap": 150,
-        "minHeadcount": 9,
-        "advertising": true,
-        "maxAnalytics": 100,
-        "delay": 1000,
-        "whStockRate": 0.5
+        "expanding": true,
+        "hiring": true,
+        "hiringCap": 300,
+        "minHeadcount": 15,
+        "advertising": false,
+        "maxAnalytics": 10,
+        "delay": 10000,
+        "whStockRate": 0.3
     },
     "gang": {
         "priority": null,
@@ -40,24 +40,27 @@
         "buying": true,
         "maxSpend": 1e10,
         "augTypes": {
-            "hacking": false,
+            "hacking": true,
             "other": false
         },
-        "targetHackLvl": 50,
+        "targetHackLvl": null,
         "crimeSuccessThreshold": null,
         "faction": "Daedalus",
         "doJobs": false
     },
     "hacknet": {
-        "delay": 100,
+        "delay": 1000,
         "buying": true,
         "buyingCache": true,
-        "toasts": true,
+        "toasts": false,
         "upgrades": null,
         "maxSpends": 1000,
         "cacheThreshold": 0.9,
-        "saveThreshold": 0.85,
+        "saveThreshold": 0.5,
         "maxProd": null,
-        "minCache": null
+        "minCache": null,
+        "freezeForAugs": false,
+        "freezeThreshold": 60,
+        "frozen": false
     }
 }
